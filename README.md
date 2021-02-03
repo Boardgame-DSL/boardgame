@@ -1,7 +1,7 @@
 # Boardgames
 
 Kandidatarbete at [CTH](https://www.chalmers.se/) by [Jennifer Krogh](https://github.com/jenniferkrogh),
-[Mattias Mattson](https://github.com/matmat), [Emma Pettersson](https://github.com/emmouto),
+[Mattias Mattsson](https://github.com/matmat), [Emma Pettersson](https://github.com/emmouto),
 [Simon Sundqvist](https://github.com/Zinfour), [Carl Wiede](https://github.com/carlwiede),
 and [Mårten Åsberg](https://github.com/89netraM).
 
