@@ -28,7 +28,10 @@ executable boardgame
   main-is:             Main.hs
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.12 && <4.13, boardgame
+  build-depends:
+      base >=4.12 && <4.13
+    , containers >= 0.6
+    , boardgame
   hs-source-dirs:      executable
   default-language:    Haskell2010
 
