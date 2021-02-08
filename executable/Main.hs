@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -6,9 +5,16 @@ module Main where
 
 import Control.Monad (join)
 import Data.List (find, intercalate)
-import Data.Map (Map, fromDistinctAscList, insert, lookup, (!))
+import Data.Map (Map, elems, fromDistinctAscList, insert, member, lookup, (!))
 import Data.Maybe (isJust)
-import MyLib (Player(..), PositionalGame(..), nextPlayer)
+import MyLib (
+    Player(..)
+  , PositionalGame(..)
+  , StrongPositionalGame(..)
+  , nextPlayer
+  , strongPositionalGameMakeMove
+  , strongPositionalGameGameOver
+  )
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Prelude hiding (lookup)
@@ -31,34 +37,31 @@ instance Show TicTacToe where
       showP (Just Player2) = "x"
       showP Nothing = " "
 
+instance StrongPositionalGame TicTacToe (Integer, Integer) where
+  position (TicTacToe b) = flip lookup b
+  positions (TicTacToe b) = elems b
+  setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c (Just p) b else Nothing
+
 instance PositionalGame TicTacToe (Integer, Integer) where
   starting = TicTacToe $
     fromDistinctAscList $
       zip
         [(x, y) | x <- [0..2], y <- [0..2]]
         (repeat Nothing)
+  makeMove = strongPositionalGameMakeMove
+  gameOver = strongPositionalGameGameOver patterns
 
-  makeMove t@(TicTacToe b) p coord = case lookup coord b of
-    Just Nothing -> Just $ TicTacToe $ insert coord (Just p) b
-    _            -> Nothing
-
-  gameOver (TicTacToe b) = join $ find isJust $ map match patterns
-    where
-      match p = find isJust $ map (singleElement . map (join . (`lookup` b))) (movedPattern p)
-
-      singleElement [] = Nothing
-      singleElement (x:xs) = join $ singleElement' x xs
-        where
-          singleElement' e [] = Just e
-          singleElement' e (x:xs) = if e == x then singleElement' e xs else Nothing
-
-      movedPattern p = [map (\(x, y) -> (x + dx, y + dy)) p | dx <- [0..2], dy <- [0..2]]
-      patterns = [
-          [(0, 0), (0, 1), (0, 2)]
-        , [(0, 0), (1, 0), (2, 0)]
-        , [(0, 0), (1, 1), (2, 2)]
-        , [(2, 0), (1, 1), (0, 2)]
-        ]
+patterns :: [[(Integer, Integer)]]
+patterns = [
+    [(0, 0), (0, 1), (0, 2)]
+  , [(1, 0), (1, 1), (1, 2)]
+  , [(2, 0), (2, 1), (2, 2)]
+  , [(0, 0), (1, 0), (2, 0)]
+  , [(0, 1), (1, 1), (2, 1)]
+  , [(0, 2), (1, 2), (2, 2)]
+  , [(0, 0), (1, 1), (2, 2)]
+  , [(2, 0), (1, 1), (0, 2)]
+  ]
 
 main :: IO ()
 main = start (starting :: TicTacToe) Player1
