@@ -7,12 +7,14 @@ module MyLib (
   , StrongPositionalGame(..)
   , strongPositionalGameMakeMove
   , strongPositionalGameGameOver
+  , player
 ) where
 
 import Control.Monad (join)
 import Data.List (find, intercalate)
 import Data.Maybe (isJust)
-import Debug.Trace (trace)
+import System.IO (hFlush, stdout)
+import Text.Read (readMaybe)
 
 data Player = Player1 | Player2
   deriving (Show, Eq)
@@ -22,7 +24,6 @@ nextPlayer Player1 = Player2
 nextPlayer Player2 = Player1
 
 class PositionalGame a c | a -> c where
-  starting :: a
   makeMove :: a -> Player -> c -> Maybe a
   gameOver :: a -> Maybe (Maybe Player)
 
@@ -44,3 +45,19 @@ strongPositionalGameGameOver patterns a = case find isJust $ map (join . reduceH
     reduceHomogeneousList :: (Eq a) => [Maybe a] -> Maybe a
     reduceHomogeneousList []     = Nothing
     reduceHomogeneousList (x:xs) = if all (== x) xs then x else Nothing
+
+player :: (Show a, Read c, PositionalGame a c) => a -> IO ()
+player startState = start startState Player1
+  where
+    start t p = print t >> play t p
+    play t p = do
+      putStr $ "Move for " ++ show p ++ ": "
+      hFlush stdout
+      c <- readMaybe <$> getLine
+      case c >>= makeMove t p of
+        Just t -> print t >> case gameOver t of
+            Just p -> case p of
+              Just p -> putStrLn $ show p ++ " won!"
+              Nothing -> putStrLn "It's a draw!"
+            Nothing -> play t (nextPlayer p)
+        Nothing -> putStrLn "Invalid move, try again" >> play t p
