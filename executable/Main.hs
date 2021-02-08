@@ -3,25 +3,29 @@
 
 module Main where
 
-import Control.Monad (join)
-import Data.List (find, intercalate)
-import Data.Map (Map, elems, fromDistinctAscList, insert, member, lookup, (!))
-import Data.Maybe (isJust)
+import Data.List (intercalate)
+import Data.Map (
+    Map
+  , elems
+  , fromDistinctAscList
+  , insert
+  , lookup
+  , member
+  , (!)
+  )
 import MyLib (
     Player(..)
   , PositionalGame(..)
   , StrongPositionalGame(..)
-  , nextPlayer
   , strongPositionalGameMakeMove
   , strongPositionalGameGameOver
   , player
   )
-import System.IO (hFlush, stdout)
-import Text.Read (readMaybe)
 import Prelude hiding (lookup)
 
 newtype TicTacToe = TicTacToe (Map (Integer, Integer) (Maybe Player))
 
+-- Creates an empty TicTacToe board with coordinates `(0..2, 0..2)`
 emptyTicTacToe :: TicTacToe
 emptyTicTacToe = TicTacToe $
   fromDistinctAscList $
@@ -40,31 +44,34 @@ instance Show TicTacToe where
     , "╚═══╧═══╧═══╝"
     ]
     where
+      -- "Shows" the elements of the given row
       row y = map (\x -> showP $ b ! (x, y)) [0..2]
       showP (Just Player1) = "o"
       showP (Just Player2) = "x"
       showP Nothing = " "
 
 instance StrongPositionalGame TicTacToe (Integer, Integer) where
+  -- Just looks up the coordinate in the underlying Map
   position (TicTacToe b) = flip lookup b
+  -- Just returns the elements in the underlying Map
   positions (TicTacToe b) = elems b
+  -- If the underlying Map has the given coordinate, update it with the given player
   setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c (Just p) b else Nothing
 
 instance PositionalGame TicTacToe (Integer, Integer) where
+  -- Just uses the "standard" implementation
   makeMove = strongPositionalGameMakeMove
-  gameOver = strongPositionalGameGameOver patterns
-
-patterns :: [[(Integer, Integer)]]
-patterns = [
-    [(0, 0), (0, 1), (0, 2)]
-  , [(1, 0), (1, 1), (1, 2)]
-  , [(2, 0), (2, 1), (2, 2)]
-  , [(0, 0), (1, 0), (2, 0)]
-  , [(0, 1), (1, 1), (2, 1)]
-  , [(0, 2), (1, 2), (2, 2)]
-  , [(0, 0), (1, 1), (2, 2)]
-  , [(2, 0), (1, 1), (0, 2)]
-  ]
+  -- "Creates" a `gameOver` function by supplying all the winning "patterns"
+  gameOver = strongPositionalGameGameOver [
+      [(0, 0), (0, 1), (0, 2)]
+    , [(1, 0), (1, 1), (1, 2)]
+    , [(2, 0), (2, 1), (2, 2)]
+    , [(0, 0), (1, 0), (2, 0)]
+    , [(0, 1), (1, 1), (2, 1)]
+    , [(0, 2), (1, 2), (2, 2)]
+    , [(0, 0), (1, 1), (2, 2)]
+    , [(2, 0), (1, 1), (0, 2)]
+    ]
 
 main :: IO ()
 main = player emptyTicTacToe
