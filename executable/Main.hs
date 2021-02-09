@@ -8,12 +8,15 @@ import Data.List (
     elemIndex
   , find
   , findIndex
+  , nub
   , intercalate
   )
 import Data.Map (
     Map
+  , assocs
   , elems
   , fromDistinctAscList
+  , fromList
   , insert
   , lookup
   , member
@@ -169,6 +172,86 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
       g = buildG (0, n * n - 1) (map fst $ filter ((== Just Player1) . snd) l)
 
 -------------------------------------------------------------------------------
+-- * Gale
+-------------------------------------------------------------------------------
+
+newtype Gale = Gale (Map (Integer, Integer) (Maybe Player))
+
+-- Creates an empty Gale playfield. Even "rows" have 4 "columns" and odd ones
+-- have 3.
+emptyGale :: Gale
+emptyGale = Gale $
+  fromList $
+    zip
+      ([0..8] >>= (\y -> [(x, y) | x <- [0..(4 - y `rem` 2)]]))
+      (repeat Nothing)
+
+--    0 1 2 3 4 5 6 7 8
+--    ╔═══╦═══╦═══╦═══╗
+-- 0┌   ┬   ┬   ┬   ┬   ┐
+-- 1│ ╠   ╬   ╬   ╬   ╣ │
+-- 2├   ┼   ┼   ┼   ┼   ┤
+-- 3│ ╠   ╬   ╬   ╬   ╣ │
+-- 4├   ┼   ┼   ┼   ┼   ┤
+-- 5│ ╠   ╬   ╬   ╬   ╣ │
+-- 6├   ┼   ┼   ┼   ┼   ┤
+-- 7│ ╠   ╬   ╬   ╬   ╣ │
+-- 8└   ┴   ┴   ┴   ┴   ┘
+--    ╚═══╩═══╩═══╩═══╝
+instance Show Gale where
+  show (Gale b) = intercalate "\n" [
+        "   0 1 2 3 4 5 6 7 8  "
+      , "   ╔═══╦═══╦═══╦═══╗  "
+      , "0┌" ++ intercalate "┬" (row 0) ++ "┐"
+      , "1│ ╠" ++ intercalate "╬" (row 1) ++ "╣ │"
+      , "2├" ++ intercalate "┼" (row 2) ++ "┤"
+      , "3│ ╠" ++ intercalate "╬" (row 3) ++ "╣ │"
+      , "4├" ++ intercalate "┼" (row 4) ++ "┤"
+      , "5│ ╠" ++ intercalate "╬" (row 5) ++ "╣ │"
+      , "6├" ++ intercalate "┼" (row 6) ++ "┤"
+      , "7│ ╠" ++ intercalate "╬" (row 7) ++ "╣ │"
+      , "8└" ++ intercalate "┴" (row 8) ++ "┘"
+      , "   ╚═══╩═══╩═══╩═══╝  "
+      ]
+    where
+      -- "Shows" the elements of the given row
+      row y = map (\x -> showP (b ! (x, y)) y) [0..(4 - y `rem` 2)]
+      showP (Just Player1) y
+        | even y      = "───"
+        | otherwise   = " │ "
+      showP (Just Player2) y
+        | even y      = " ║ "
+        | otherwise   = "═══"
+      showP Nothing _ = "   "
+
+instance StrongPositionalGame Gale (Integer, Integer) where
+  position (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing
+    where c = (x `div` 2, y)
+  positions (Gale b) = elems b
+  setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c (Just p) b else Nothing
+    where c = (x `div` 2, y)
+
+instance PositionalGame Gale (Integer, Integer) where
+  makeMove = strongPositionalGameMakeMove
+  gameOver (Gale b)
+    | all isJust (elems b) = Just Nothing
+    | path player1Graph (-1) (-2) = Just $ Just Player1
+    | path player2Graph (-1) (-2) = Just $ Just Player2
+    | otherwise            = Nothing
+    where
+      playerGraph from to p = buildG (-2, 19) $
+        filter ((Just p ==) . snd) (assocs b) >>=
+          ((\(x, y) -> [(x, y), (y, x)]) . (\((x, y), _) -> (fromInteger $ from x y, fromInteger $ to x y)))
+      player1Graph = playerGraph
+        (\x y -> if x == 0 then -1 else (y `div` 2) + 5 * (x + (y `rem` 2) - 1))
+        (\x y -> if x == 4 then -2 else (y `div` 2) + (y `rem` 2) + 5 * x)
+        Player1
+      player2Graph = playerGraph
+        (\x y -> if y == 0 then -1 else x + 5 * ((y `div` 2) + (y `rem` 2) - 1))
+        (\x y -> if y == 8 then -2 else x + (y `rem` 2) + 5 * (y `div` 2))
+        Player2
+
+-------------------------------------------------------------------------------
 -- * CLI interactions
 -------------------------------------------------------------------------------
 
@@ -177,6 +260,7 @@ main = do
   putStrLn "1: TicTacToe"
   putStrLn "2: Arithmetic Progression Game"
   putStrLn "3: Shannon Switching Game"
+  putStrLn "4: Gale"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -184,6 +268,7 @@ main = do
     1 -> player emptyTicTacToe
     2 -> playAPG
     3 -> player $ createShannonSwitchingGame 5
+    4 -> player emptyGale
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
