@@ -60,8 +60,8 @@ instance Show TicTacToe where
     where
       -- "Shows" the elements of the given row
       row y = map (\x -> showP $ b ! (x, y)) [0..2]
-      showP (Just Player1) = "o"
-      showP (Just Player2) = "x"
+      showP (Just Player1) = "\ESC[34mo\ESC[0m"
+      showP (Just Player2) = "\ESC[31mx\ESC[0m"
       showP Nothing = " "
 
 instance PositionalGame TicTacToe (Integer, Integer) where
@@ -100,9 +100,9 @@ instance Show ArithmeticProgressionGame where
   show (ArithmeticProgressionGame _ ps) = (\(is, ps) -> intercalate "," is ++ "\n" ++ intercalate "," ps) $
         unzip $ zipWith (\i p -> (pad $ show i, pad $ showP p)) [1..] ps
     where
-      showP Nothing        = "_"
-      showP (Just Player1) = "O"
-      showP (Just Player2) = "X"
+      showP Nothing        = "  _"
+      showP (Just Player1) = "  \ESC[34mO\ESC[0m"
+      showP (Just Player2) = "  \ESC[31mX\ESC[0m"
       pad x = replicate (3 - length x) ' ' ++ x
 
 instance PositionalGame ArithmeticProgressionGame Int where
@@ -142,12 +142,12 @@ instance Show ShannonSwitchingGame where
     j <- [0 .. n - 2]]
     ++ [concat ["o" ++ showH (fromJust $ getPosition a (i+(n-1)*n, (i+1)+(n-1)*n)) | i <- [0 .. n - 2]] ++ "o"])
     where
-      showH (Just Player1) = "───"
-      showH (Just Player2) = "═══"
-      showH Nothing        = "---"
-      showV (Just Player1) = "│"
-      showV (Just Player2) = "║"
-      showV Nothing        = ":"
+      showH (Just Player1) = "\ESC[34m───\ESC[0m"
+      showH (Just Player2) = "\ESC[31m───\ESC[0m"
+      showH Nothing        = "───"
+      showV (Just Player1) = "\ESC[34m│\ESC[0m"
+      showV (Just Player2) = "\ESC[31m│\ESC[0m"
+      showV Nothing        = "│"
 
 instance PositionalGame ShannonSwitchingGame (Int, Int) where
   getPosition (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
@@ -194,27 +194,27 @@ emptyGale = Gale $
 instance Show Gale where
   show (Gale b) = intercalate "\n" [
         "   0 1 2 3 4 5 6 7 8  "
-      , "   ╔═══╦═══╦═══╦═══╗  "
-      , "0┌" ++ intercalate "┬" (row 0) ++ "┐"
-      , "1│ ╠" ++ intercalate "╬" (row 1) ++ "╣ │"
-      , "2├" ++ intercalate "┼" (row 2) ++ "┤"
-      , "3│ ╠" ++ intercalate "╬" (row 3) ++ "╣ │"
-      , "4├" ++ intercalate "┼" (row 4) ++ "┤"
-      , "5│ ╠" ++ intercalate "╬" (row 5) ++ "╣ │"
-      , "6├" ++ intercalate "┼" (row 6) ++ "┤"
-      , "7│ ╠" ++ intercalate "╬" (row 7) ++ "╣ │"
-      , "8└" ++ intercalate "┴" (row 8) ++ "┘"
-      , "   ╚═══╩═══╩═══╩═══╝  "
+      , "   \ESC[31m╔═══╦═══╦═══╦═══╗\ESC[0m  "
+      , "0\ESC[34m┌" ++ intercalate "\ESC[34m┬" (row 0) ++ "\ESC[34m┐\ESC[0m"
+      , "1\ESC[34m│ \ESC[31m╠" ++ intercalate "\ESC[31m╬" (row 1) ++ "\ESC[31m╣ \ESC[34m│\ESC[0m"
+      , "2\ESC[34m├" ++ intercalate "\ESC[34m┼" (row 2) ++ "\ESC[34m┤\ESC[0m"
+      , "3\ESC[34m│ \ESC[31m╠" ++ intercalate "\ESC[31m╬" (row 3) ++ "\ESC[31m╣ \ESC[34m│\ESC[0m"
+      , "4\ESC[34m├" ++ intercalate "\ESC[34m┼" (row 4) ++ "\ESC[34m┤\ESC[0m"
+      , "5\ESC[34m│ \ESC[31m╠" ++ intercalate "\ESC[31m╬" (row 5) ++ "\ESC[31m╣ \ESC[34m│\ESC[0m"
+      , "6\ESC[34m├" ++ intercalate "\ESC[34m┼" (row 6) ++ "\ESC[34m┤\ESC[0m"
+      , "7\ESC[34m│ \ESC[31m╠" ++ intercalate "\ESC[31m╬" (row 7) ++ "\ESC[31m╣ \ESC[34m│\ESC[0m"
+      , "8\ESC[34m└" ++ intercalate "\ESC[34m┴" (row 8) ++ "\ESC[34m┘\ESC[0m"
+      , "   \ESC[31m╚═══╩═══╩═══╩═══╝\ESC[0m  "
       ]
     where
       -- "Shows" the elements of the given row
       row y = map (\x -> showP (b ! (x, y)) y) [0..(4 - y `rem` 2)]
       showP (Just Player1) y
-        | even y      = "───"
-        | otherwise   = " │ "
+        | even y      = "\ESC[34m───"
+        | otherwise   = " \ESC[34m│ "
       showP (Just Player2) y
-        | even y      = " ║ "
-        | otherwise   = "═══"
+        | even y      = " \ESC[31m║ "
+        | otherwise   = "\ESC[31m═══"
       showP Nothing _ = "   "
 
 instance PositionalGame Gale (Integer, Integer) where

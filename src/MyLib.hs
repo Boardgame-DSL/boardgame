@@ -78,7 +78,9 @@ player :: (Show a, Read c, PositionalGame a c) => a -> IO ()
 player startState = start startState Player1
   where
     -- | Prints out the starting state, then plays the game.
-    start t p = print t >> play t p
+    start t p = putStr "\ESC[2J" >> printGame t >> play t p
+    -- | Prints out the game in the top left corner of the terminal
+    printGame t = putStr "\ESC[s\ESC[0;0H" >> print t >> putStr "\ESC[u"
     -- | Asks for input, prints out the new state or repeats if the input/move
     --   is invalid. Repeats until the game is over.
     play t p = do
@@ -86,7 +88,7 @@ player startState = start startState Player1
       hFlush stdout
       c <- readMaybe <$> getLine
       case c >>= makeMove t p of
-        Just t -> print t >> case gameOver t of
+        Just t -> printGame t >> case gameOver t of
             Just p -> case p of
               Just p -> putStrLn $ show p ++ " won!"
               Nothing -> putStrLn "It's a draw!"
