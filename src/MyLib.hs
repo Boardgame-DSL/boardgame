@@ -3,11 +3,10 @@
 module MyLib (
     Player(..)
   , PositionalGame(..)
-  , StrongPositionalGame(..)
   , nextPlayer
   , player
-  , strongPositionalGameGameOver
-  , strongPositionalGameMakeMove
+  , takeEmptyMakeMove
+  , patternMatchingGameOver
 ) where
 
 import Control.Monad (join)
@@ -38,30 +37,34 @@ class PositionalGame a c | a -> c where
   -- > Just (Just p) -- Player p won
   -- > Just Nothing  -- Draw
   gameOver :: a -> Maybe (Maybe Player)
-
--- | A type class for strong positional games.
-class StrongPositionalGame a c | a -> c where
-  -- | Returns which player (or nothing) has taken the position at the given
-  --   coordinate, or 'Nothing' if the given coordinate is invalid.
-  position :: a -> c -> Maybe (Maybe Player)
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Maybe Player]
+  -- | Returns which player (or nothing) has taken the position at the given
+  --   coordinate, or 'Nothing' if the given coordinate is invalid.
+  --
+  -- > Nothing       -- Invalid position
+  -- > Just (Just p) -- Player p owns this position
+  -- > Just Nothing  -- This position is empty
+  getPosition :: a -> c -> Maybe (Maybe Player)
   -- | Takes the position at the given coordinate for the given player and
   --   returns the new state, or 'Nothing' if the given coordinate is invalid.
   setPosition :: a -> c -> Player -> Maybe a
 
--- | An implementation of 'makeMove' for a 'StrongPositionalGame'.
-strongPositionalGameMakeMove :: StrongPositionalGame a c => a -> Player -> c -> Maybe a
-strongPositionalGameMakeMove a p coord = case position a coord of
+-- | A standard implementation of 'makeMove' for a 'PositionalGame'.
+--   Only allows move that "take" empty existing positions.
+takeEmptyMakeMove :: PositionalGame a c => a -> Player -> c -> Maybe a
+takeEmptyMakeMove a p coord = case getPosition a coord of
   Just Nothing -> setPosition a coord p
   _            -> Nothing
 
--- | Returns an implementation of 'gameOver' for a 'StrongPositionalGame' when
---   given a set of winning sets.
-strongPositionalGameGameOver :: (Eq c, StrongPositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
-strongPositionalGameGameOver patterns a = case find isJust $ map (join . reduceHomogeneousList . map (position a)) patterns of
-    o@(Just _) -> o
-    Nothing    -> if all isJust (positions a) then Just Nothing else Nothing
+-- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given
+--   a set of winning sets. A player is victorious when they "own" one of the
+--   winning sets. The game ends in a draw when all positions on the board are
+--   taken.
+patternMatchingGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
+patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomogeneousList . map (getPosition a)) patterns of
+    Nothing -> if all isJust (positions a) then Just Nothing else Nothing
+    just    -> just
   where
     -- | Returns an element of the homogeneous list, or 'Nothing'.
     reduceHomogeneousList :: (Eq a) => [Maybe a] -> Maybe a

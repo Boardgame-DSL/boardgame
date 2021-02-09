@@ -26,10 +26,9 @@ import Data.Maybe (fromJust, isJust)
 import MyLib (
     Player(..)
   , PositionalGame(..)
-  , StrongPositionalGame(..)
-  , strongPositionalGameMakeMove
-  , strongPositionalGameGameOver
+  , patternMatchingGameOver
   , player
+  , takeEmptyMakeMove
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -65,19 +64,17 @@ instance Show TicTacToe where
       showP (Just Player2) = "x"
       showP Nothing = " "
 
-instance StrongPositionalGame TicTacToe (Integer, Integer) where
+instance PositionalGame TicTacToe (Integer, Integer) where
   -- Just looks up the coordinate in the underlying Map
-  position (TicTacToe b) = flip lookup b
+  getPosition (TicTacToe b) = flip lookup b
   -- Just returns the elements in the underlying Map
   positions (TicTacToe b) = elems b
   -- If the underlying Map has the given coordinate, update it with the given player
   setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c (Just p) b else Nothing
-
-instance PositionalGame TicTacToe (Integer, Integer) where
   -- Just uses the "standard" implementation
-  makeMove = strongPositionalGameMakeMove
+  makeMove = takeEmptyMakeMove
   -- "Creates" a `gameOver` function by supplying all the winning "patterns"
-  gameOver = strongPositionalGameGameOver [
+  gameOver = patternMatchingGameOver [
       [(0, 0), (0, 1), (0, 2)]
     , [(1, 0), (1, 1), (1, 2)]
     , [(2, 0), (2, 1), (2, 2)]
@@ -108,17 +105,15 @@ instance Show ArithmeticProgressionGame where
       showP (Just Player2) = "X"
       pad x = replicate (3 - length x) ' ' ++ x
 
-instance StrongPositionalGame ArithmeticProgressionGame Int where
-  position (ArithmeticProgressionGame _ l) i = if i <= length l then Just $ l !! (i - 1) else Nothing
+instance PositionalGame ArithmeticProgressionGame Int where
+  getPosition (ArithmeticProgressionGame _ l) i = if i <= length l then Just $ l !! (i - 1) else Nothing
   positions (ArithmeticProgressionGame _ l) = l
   setPosition (ArithmeticProgressionGame k l) i p = if i <= length l
     then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ Just p : drop i l)
     else Nothing
-
-instance PositionalGame ArithmeticProgressionGame Int where
-  makeMove = strongPositionalGameMakeMove
+  makeMove = takeEmptyMakeMove
   gameOver a@(ArithmeticProgressionGame k l) = let n = length l
-    in strongPositionalGameGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a
+    in patternMatchingGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a
 
 -------------------------------------------------------------------------------
 -- * Shannon Switching Game
@@ -142,10 +137,10 @@ createShannonSwitchingGame n = ShannonSwitchingGame (n, gridEdges n)
 -- ║   │   :
 -- o───o───o
 instance Show ShannonSwitchingGame where
-  show a@(ShannonSwitchingGame (n, l)) = intercalate "\n" ([concat ["o" ++ showH (fromJust $ position a (i+j*n, (i+1)+j*n)) | i <- [0 .. n - 2]]
-    ++ "o\n" ++ concat [showV (fromJust $ position a (i+j*n, i+(j+1)*n)) ++ "   " | i <- [0 .. n - 2]] ++ showV (fromJust $ position a ((n-1)+j*n, (n-1)+(j+1)*n) ) |
+  show a@(ShannonSwitchingGame (n, l)) = intercalate "\n" ([concat ["o" ++ showH (fromJust $ getPosition a (i+j*n, (i+1)+j*n)) | i <- [0 .. n - 2]]
+    ++ "o\n" ++ concat [showV (fromJust $ getPosition a (i+j*n, i+(j+1)*n)) ++ "   " | i <- [0 .. n - 2]] ++ showV (fromJust $ getPosition a ((n-1)+j*n, (n-1)+(j+1)*n) ) |
     j <- [0 .. n - 2]]
-    ++ [concat ["o" ++ showH (fromJust $ position a (i+(n-1)*n, (i+1)+(n-1)*n)) | i <- [0 .. n - 2]] ++ "o"])
+    ++ [concat ["o" ++ showH (fromJust $ getPosition a (i+(n-1)*n, (i+1)+(n-1)*n)) | i <- [0 .. n - 2]] ++ "o"])
     where
       showH (Just Player1) = "───"
       showH (Just Player2) = "═══"
@@ -154,15 +149,13 @@ instance Show ShannonSwitchingGame where
       showV (Just Player2) = "║"
       showV Nothing        = ":"
 
-instance StrongPositionalGame ShannonSwitchingGame (Int, Int) where
-  position (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
+instance PositionalGame ShannonSwitchingGame (Int, Int) where
+  getPosition (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
   positions (ShannonSwitchingGame (_, l)) = map snd l
   setPosition (ShannonSwitchingGame (n, l)) c p = case findIndex ((== c) . fst) l of
     Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, Just p) : drop (i + 1) l)
     Nothing -> Nothing
-
-instance PositionalGame ShannonSwitchingGame (Int, Int) where
-  makeMove = strongPositionalGameMakeMove
+  makeMove = takeEmptyMakeMove
   gameOver (ShannonSwitchingGame (n, l))
     | path g 0 (n * n - 1) = Just (Just Player1)
     | path g (n - 1) (n * n - n) = Just (Just Player2)
@@ -224,15 +217,13 @@ instance Show Gale where
         | otherwise   = "═══"
       showP Nothing _ = "   "
 
-instance StrongPositionalGame Gale (Integer, Integer) where
-  position (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing
+instance PositionalGame Gale (Integer, Integer) where
+  getPosition (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing
     where c = (x `div` 2, y)
   positions (Gale b) = elems b
   setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c (Just p) b else Nothing
     where c = (x `div` 2, y)
-
-instance PositionalGame Gale (Integer, Integer) where
-  makeMove = strongPositionalGameMakeMove
+  makeMove = takeEmptyMakeMove
   gameOver (Gale b)
     | all isJust (elems b) = Just Nothing
     | path player1Graph (-1) (-2) = Just $ Just Player1
