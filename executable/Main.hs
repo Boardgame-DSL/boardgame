@@ -252,7 +252,7 @@ instance PositionalGame Gale (Integer, Integer) where
 -------------------------------------------------------------------------------
 
 hexSize :: Int
-hexSize = 3
+hexSize = 11
 
 newtype Hex = Hex (Map (Int, Int) (Maybe Player))
   deriving (Show)
@@ -274,24 +274,18 @@ instance PositionalGame Hex (Int, Int) where
     | True `elem` (map (\(x, y) -> path (getPlayerGraph Player2 (Hex b)) x y) (edgePaths Player2)) = Just (Just Player2)
     | otherwise = Nothing
 
-edgeVertexes :: Player -> [Int]
-edgeVertexes Player1 = map positionToVertex ([(x, 0) | x <- [0..hexSize-1]] ++ [ (x,hexSize-1) | x <- [0..hexSize-1]])
-edgeVertexes Player2 = map positionToVertex ([(0, y) | y <- [0..hexSize-1]] ++ [ (hexSize-1,y) | y <- [0..hexSize-1]])
+edgeVertexes :: Player -> ([Int], [Int])
+edgeVertexes Player1 = ([positionToVertex (x, 0) | x <- [0..hexSize-1]], [positionToVertex (x,hexSize-1) | x <- [0..hexSize-1]])
+edgeVertexes Player2 = ([positionToVertex (0, y) | y <- [0..hexSize-1]], [positionToVertex (hexSize-1,y) | y <- [0..hexSize-1]])
 
 edgePaths :: Player -> [(Int,Int)]
-edgePaths Player1 = [(v1, v2) | v1 <- ev, v2 <- ev, v1 /= v2]
-  where ev = edgeVertexes Player1
-edgePaths Player2 = [(v1, v2) | v1 <- ev, v2 <- ev, v1 /= v2]
-  where ev = edgeVertexes Player2
+edgePaths p = [(v1, v2) | v1 <- ev1, v2 <- ev2, v1 /= v2]
+  where ev1 = fst (edgeVertexes p)
+        ev2 = snd (edgeVertexes p)
+
 
 positionToVertex :: (Int, Int) -> Int
 positionToVertex pos = fromMaybe (-1) (elemIndex pos (indices (paraHexGrid hexSize hexSize)))
-
---vertexToPosition :: Int -> (Int, Int)
---vertexToPosition vertex = indices (paraHexGrid hexSize hexSize) !! vertex
-
---makeEdgeList :: [(Int, [Int])] -> [(Int,Int)]
---makeEdgeList vert = [(x, y) | x <- fst vert, y <- concat (snd vert)]
 
 getPlayerGraph :: Player -> Hex -> Graph
 getPlayerGraph p b = buildG (0, hexSize*hexSize) $
@@ -302,17 +296,6 @@ getPlayerGraph p b = buildG (0, hexSize*hexSize) $
 
 getPlayerPositions :: Player -> Hex -> [(Int,Int)]
 getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip (keys b) (elems b))
-
---getPlayerVertexes :: Player -> Hex -> [Int]
---getPlayerVertexes p (Hex b) = map positionToVertex (getPlayerPositions p (Hex b))
-
---getPlayerEdgePositions :: Player -> Hex -> ([(Int,Int)], [(Int,Int)])
---getPlayerEdgePositions p b = (fst ecs `intersect` cs, snd ecs `intersect` cs) where
---  ecs = edgePositions p
---  cs  = getPlayerPositions p b
-
---playerGraph :: Player -> Hex -> Graph
---playerGraph p b = 
 
 -------------------------------------------------------------------------------
 -- * CLI interactions
