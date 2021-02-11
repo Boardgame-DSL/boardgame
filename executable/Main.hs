@@ -19,12 +19,13 @@ import Data.Map (
   , keys
   , fromDistinctAscList
   , fromList
+  , toList
   , insert
   , lookup
   , member
   , (!)
   )
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, isJust, fromMaybe)
 import MyLib (
     Player(..)
   , PositionalGame(..)
@@ -268,22 +269,50 @@ instance PositionalGame Hex (Int, Int) where
   positions (Hex b) = elems b
   setPosition (Hex b) c p = if member c b then Just $ Hex $ insert c (Just p) b else Nothing
   makeMove = takeEmptyMakeMove
-  gameOver = undefined
---    | edgesAreConnected Player1 b = Just (Just Player1)
---    | edgesAreConnected Player2 b = Just (Just Player2)
---    | otherwise = Nothing
+  gameOver (Hex b)
+    | True `elem` (map (\(x, y) -> path (getPlayerGraph Player1 (Hex b)) x y) (edgePaths Player1)) = Just (Just Player1)
+    | True `elem` (map (\(x, y) -> path (getPlayerGraph Player2 (Hex b)) x y) (edgePaths Player2)) = Just (Just Player2)
+    | otherwise = Nothing
 
-edgePositions :: Player -> ([(Int,Int)], [(Int,Int)])
-edgePositions Player1 = ([ (x, 0) | x <- [0..hexSize-1]], [ (x, hexSize-1) | x <- [0..hexSize-1]])
-edgePositions Player2 = ([ (0, y) | y <- [0..hexSize-1]], [ (hexSize-1, y) | y <- [0..hexSize-1]])
+edgeVertexes :: Player -> [Int]
+edgeVertexes Player1 = map positionToVertex ([(x, 0) | x <- [0..hexSize-1]] ++ [ (x,hexSize-1) | x <- [0..hexSize-1]])
+edgeVertexes Player2 = map positionToVertex ([(0, y) | y <- [0..hexSize-1]] ++ [ (hexSize-1,y) | y <- [0..hexSize-1]])
+
+edgePaths :: Player -> [(Int,Int)]
+edgePaths Player1 = [(v1, v2) | v1 <- ev, v2 <- ev, v1 /= v2]
+  where ev = edgeVertexes Player1
+edgePaths Player2 = [(v1, v2) | v1 <- ev, v2 <- ev, v1 /= v2]
+  where ev = edgeVertexes Player2
+
+positionToVertex :: (Int, Int) -> Int
+positionToVertex pos = fromMaybe (-1) (elemIndex pos (indices (paraHexGrid hexSize hexSize)))
+
+--vertexToPosition :: Int -> (Int, Int)
+--vertexToPosition vertex = indices (paraHexGrid hexSize hexSize) !! vertex
+
+--makeEdgeList :: [(Int, [Int])] -> [(Int,Int)]
+--makeEdgeList vert = [(x, y) | x <- fst vert, y <- concat (snd vert)]
+
+getPlayerGraph :: Player -> Hex -> Graph
+getPlayerGraph p b = buildG (0, hexSize*hexSize) $
+                      concatMap (\(x, y) -> zip (repeat x) y) $
+                        zip (map positionToVertex playerPos) 
+                            (map ((map positionToVertex . (`intersect` playerPos)) . neighbours (paraHexGrid hexSize hexSize)) playerPos)
+  where playerPos = getPlayerPositions p b
 
 getPlayerPositions :: Player -> Hex -> [(Int,Int)]
 getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip (keys b) (elems b))
 
-getPlayerEdgePositions :: Player -> Hex -> ([(Int,Int)], [(Int,Int)])
-getPlayerEdgePositions p b = (fst ecs `intersect` cs, snd ecs `intersect` cs) where
-  ecs = edgePositions p
-  cs  = getPlayerPositions p b
+--getPlayerVertexes :: Player -> Hex -> [Int]
+--getPlayerVertexes p (Hex b) = map positionToVertex (getPlayerPositions p (Hex b))
+
+--getPlayerEdgePositions :: Player -> Hex -> ([(Int,Int)], [(Int,Int)])
+--getPlayerEdgePositions p b = (fst ecs `intersect` cs, snd ecs `intersect` cs) where
+--  ecs = edgePositions p
+--  cs  = getPlayerPositions p b
+
+--playerGraph :: Player -> Hex -> Graph
+--playerGraph p b = 
 
 -------------------------------------------------------------------------------
 -- * CLI interactions
