@@ -8,6 +8,7 @@ import Data.List (
     elemIndex
   , find
   , findIndex
+  , intersect
   , nub
   , intercalate
   )
@@ -15,6 +16,7 @@ import Data.Map (
     Map
   , assocs
   , elems
+  , keys
   , fromDistinctAscList
   , fromList
   , insert
@@ -33,6 +35,8 @@ import MyLib (
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
 
+import Math.Geometry.Grid
+import Math.Geometry.Grid.Hexagonal
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -243,6 +247,45 @@ instance PositionalGame Gale (Integer, Integer) where
         Player2
 
 -------------------------------------------------------------------------------
+-- * Hex
+-------------------------------------------------------------------------------
+
+hexSize :: Int
+hexSize = 3
+
+newtype Hex = Hex (Map (Int, Int) (Maybe Player))
+  deriving (Show)
+
+emptyHex :: Hex
+emptyHex = Hex $
+  fromDistinctAscList $
+    zip
+      (indices (paraHexGrid hexSize hexSize))
+      (repeat Nothing)
+
+instance PositionalGame Hex (Int, Int) where
+  getPosition (Hex b) = flip lookup b
+  positions (Hex b) = elems b
+  setPosition (Hex b) c p = if member c b then Just $ Hex $ insert c (Just p) b else Nothing
+  makeMove = takeEmptyMakeMove
+  gameOver = undefined
+--    | edgesAreConnected Player1 b = Just (Just Player1)
+--    | edgesAreConnected Player2 b = Just (Just Player2)
+--    | otherwise = Nothing
+
+edgePositions :: Player -> ([(Int,Int)], [(Int,Int)])
+edgePositions Player1 = ([ (x, 0) | x <- [0..hexSize-1]], [ (x, hexSize-1) | x <- [0..hexSize-1]])
+edgePositions Player2 = ([ (0, y) | y <- [0..hexSize-1]], [ (hexSize-1, y) | y <- [0..hexSize-1]])
+
+getPlayerPositions :: Player -> Hex -> [(Int,Int)]
+getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip (keys b) (elems b))
+
+getPlayerEdgePositions :: Player -> Hex -> ([(Int,Int)], [(Int,Int)])
+getPlayerEdgePositions p b = (fst ecs `intersect` cs, snd ecs `intersect` cs) where
+  ecs = edgePositions p
+  cs  = getPlayerPositions p b
+
+-------------------------------------------------------------------------------
 -- * CLI interactions
 -------------------------------------------------------------------------------
 
@@ -252,6 +295,7 @@ main = do
   putStrLn "2: Arithmetic Progression Game"
   putStrLn "3: Shannon Switching Game"
   putStrLn "4: Gale"
+  putStrLn "5: Hex"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -260,6 +304,7 @@ main = do
     2 -> playAPG
     3 -> player $ createShannonSwitchingGame 5
     4 -> player emptyGale
+    5 -> player emptyHex
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
