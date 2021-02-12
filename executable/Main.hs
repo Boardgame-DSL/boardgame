@@ -252,10 +252,9 @@ instance PositionalGame Gale (Integer, Integer) where
 -------------------------------------------------------------------------------
 
 hexSize :: Int
-hexSize = 11
+hexSize = 5
 
 newtype Hex = Hex (Map (Int, Int) (Maybe Player))
-  deriving (Show)
 
 emptyHex :: Hex
 emptyHex = Hex $
@@ -263,6 +262,24 @@ emptyHex = Hex $
     zip
       (indices (paraHexGrid hexSize hexSize))
       (repeat Nothing)
+
+instance Show Hex where
+  show (Hex b) =
+    replicate (2*(hexSize-1)) ' ' ++ concat (replicate hexSize "  _ ") ++ "\n"
+    ++
+    intercalate "\n" [intercalate "\n" (gridShowLine (Hex b) r) | r <- [0..hexSize-1]]
+    ++
+    "\n" ++ concat (replicate hexSize " \\_/")
+
+gridShowLine :: Hex -> Int -> [String]
+gridShowLine (Hex b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
+                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ b ! (x, hexSize-1-y)) [0..(hexSize-1)]) ++ " |"
+                          ] where
+  showP (Just Player1) = "1"
+  showP (Just Player2) = "2"
+  showP Nothing = " "
+  rowOffset = replicate (2*(hexSize-y-1)) ' '
+  tileTop = concat $ replicate hexSize " / \\"
 
 instance PositionalGame Hex (Int, Int) where
   getPosition (Hex b) = flip lookup b
