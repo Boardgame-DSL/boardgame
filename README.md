@@ -22,3 +22,10 @@ A example executable is located in `./executable`. Use `cabal run boardgame` to
 test it.
 
 A test suite is located in `./tests`. Use `cabal test` to run it.
+
+## UI Development
+
+The UI side of this project is targeting the web by compiling the Haskell code
+to WASM with [Asterius](https://github.com/tweag/asterius/).
+
+TODO: Some explanation of how it works.

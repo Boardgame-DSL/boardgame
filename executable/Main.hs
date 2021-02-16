@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE CPP #-}
 
 module Main where
 
+import System.Info (arch, os)
 import Data.Graph (Graph, buildG, path)
 import Data.List (
     elemIndex
@@ -32,12 +34,22 @@ import MyLib (
   , patternMatchingGameOver
   , playIO
   , takeEmptyMakeMove
+#ifdef WASM
+  , playWeb
+#endif
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
 
 import Math.Geometry.Grid
 import Math.Geometry.Grid.Hexagonal
+
+#ifdef WASM
+import qualified Data.Vector as V ((!), fromList)
+import Data.Aeson
+import Data.Aeson.Types
+#endif
+
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -68,6 +80,21 @@ instance Show TicTacToe where
       showP (Just Player1) = "\ESC[34mo\ESC[0m"
       showP (Just Player2) = "\ESC[31mx\ESC[0m"
       showP Nothing = " "
+
+#ifdef WASM
+-- Converts the game to a JSON array with three arrays with three integers
+-- each. The integers correspond to
+-- 0 → Nothing,
+-- 1 → Just Player1, and
+-- 2 → Just Player2.
+instance ToJSON TicTacToe where
+  toJSON (TicTacToe b) = Array $ V.fromList $ map row [0..2]
+    where
+      row y = Array $ V.fromList $ map (\x -> toJSONP $ b ! (x, y)) [0..2]
+      toJSONP (Just Player1) = toJSON (1 :: Int)
+      toJSONP (Just Player2) = toJSON (2 :: Int)
+      toJSONP Nothing = toJSON (0 :: Int)
+#endif
 
 instance PositionalGame TicTacToe (Integer, Integer) where
   -- Just looks up the coordinate in the underlying Map
@@ -318,8 +345,14 @@ getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip
 -- * CLI interactions
 -------------------------------------------------------------------------------
 
+#ifdef WASM
+main :: IO ()
+main = playWeb emptyTicTacToe
+#else
 main :: IO ()
 main = do
+  print os
+  print arch
   putStrLn "1: TicTacToe"
   putStrLn "2: Arithmetic Progression Game"
   putStrLn "3: Shannon Switching Game"
@@ -349,3 +382,4 @@ playAPG = do
   case createArithmeticProgressionGame n k of
     Just a -> playIO a
     Nothing -> putStrLn "Not valid input (n < k)"
+#endif

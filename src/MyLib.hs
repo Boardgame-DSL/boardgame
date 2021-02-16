@@ -1,5 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE CPP #-}
 
 module MyLib (
     Player(..)
@@ -9,6 +10,9 @@ module MyLib (
   , playIO
   , takeEmptyMakeMove
   , patternMatchingGameOver
+#ifdef WASM
+  , playWeb
+#endif
 ) where
 
 import Control.Monad (join)
@@ -17,6 +21,12 @@ import Data.List (find, intercalate)
 import Data.Maybe (isJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
+
+#ifdef WASM
+import Asterius.Aeson (jsonFromJSVal, jsonToJSVal)
+import Asterius.Types (JSVal)
+import Data.Aeson (FromJSON, ToJSON)
+#endif
 
 -- | Represents one of the two players.
 data Player = Player1 | Player2
@@ -116,3 +126,32 @@ playIO = play putState putTurn getMove putInvalidMove putGameOver
       Just Player1 -> putStrLn "Player 1 won!" >> hFlush stdout
       Just Player2 -> putStrLn "Player 2 won!" >> hFlush stdout
       Nothing      -> putStrLn "It's a draw!" >> hFlush stdout
+
+#ifdef WASM
+foreign import javascript unsafe "boardgame.putState($1)" jsPutState :: JSVal -> IO ()
+foreign import javascript unsafe "boardgame.putTurn($1)" jsPutTurn :: Int -> IO ()
+foreign import javascript safe "boardgame.getMove()" jsGetMove :: IO JSVal
+foreign import javascript unsafe "boardgame.putInvalidInput()" jsPutInvalidInput :: IO ()
+foreign import javascript unsafe "boardgame.putInvalidMove()" jsPutInvalidMove :: IO ()
+foreign import javascript unsafe "boardgame.putGameOver($1)" jsPutGameOver :: Int -> IO ()
+
+-- | Plays a 'PositionalGame' with the help of JavaScript FFI. The state of the
+--   game ('a') needs to implement 'Data.Aeson.ToJSON' and the coordinates
+--   ('c') needs to implement 'Data.Aeson.FromJSON'. This is because they need
+--   to be passed to and from (respectively) the JavaScript runtime.
+playWeb :: (ToJSON a, FromJSON c, PositionalGame a c) => a -> IO ()
+playWeb = play putState putTurn getMove putInvalidMove putGameOver
+  where
+    putState = jsPutState . jsonToJSVal
+    putTurn p = jsPutTurn $ case p of
+      Player1 -> 1
+      Player2 -> 2
+    getMove = jsGetMove <&> jsonFromJSVal >>= \case
+      Left _  -> jsPutInvalidInput >> getMove
+      Right c -> return c
+    putInvalidMove = jsPutInvalidMove
+    putGameOver = \case
+      Just Player1 -> jsPutGameOver 1
+      Just Player2 -> jsPutGameOver 2
+      Nothing      -> jsPutGameOver 0
+#endif
