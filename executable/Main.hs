@@ -30,7 +30,7 @@ import MyLib (
     Player(..)
   , PositionalGame(..)
   , patternMatchingGameOver
-  , player
+  , playIO
   , takeEmptyMakeMove
   )
 import System.IO (hFlush, stdout)
@@ -328,12 +328,14 @@ main = do
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
+  putStr "\ESC[2J"
+  hFlush stdout
   case choice of
-    1 -> player emptyTicTacToe
+    1 -> playIO emptyTicTacToe
     2 -> playAPG
-    3 -> player $ createShannonSwitchingGame 5
-    4 -> player emptyGale
-    5 -> player emptyHex
+    3 -> playIO $ createShannonSwitchingGame 5
+    4 -> playIO emptyGale
+    5 -> playIO emptyHex
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
@@ -345,5 +347,5 @@ playAPG = do
   hFlush stdout
   k <- read <$> getLine
   case createArithmeticProgressionGame n k of
-    Just a -> player a
+    Just a -> playIO a
     Nothing -> putStrLn "Not valid input (n < k)"
