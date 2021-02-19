@@ -33,6 +33,7 @@ executable boardgame
     , grid >= 7.8.14
     , containers >= 0.6
     , boardgame
+    , array
   hs-source-dirs:      executable
   default-language:    Haskell2010
 
