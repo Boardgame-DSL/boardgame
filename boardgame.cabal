@@ -17,10 +17,10 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
 library
-  exposed-modules:     MyLib
+  exposed-modules:     MyLib, ColoredGraph
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.12
+  build-depends:       base >=4.12, containers
   hs-source-dirs:      src
   default-language:    Haskell2010
 

@@ -7,6 +7,11 @@ module MyLib (
   , player
   , takeEmptyMakeMove
   , patternMatchingGameOver
+  , drawIf
+  , player1WinsIf
+  , criteriaBool
+  , criteria
+  , symmetric
 ) where
 
 import Control.Monad (join)
@@ -14,6 +19,9 @@ import Data.List (find, intercalate)
 import Data.Maybe (isJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
+import Control.Monad (foldM)
+import Control.Applicative ((<|>))
+import ColoredGraph
 
 -- | Represents one of the two players.
 data Player = Player1 | Player2
@@ -94,3 +102,83 @@ player startState = start startState Player1
               Nothing -> putStrLn "It's a draw!"
             Nothing -> play t (nextPlayer p)
         Nothing -> putStrLn "Invalid move, try again" >> play t p
+
+
+data BiasedPositionalGame a c = BiasedPositionalGame Int Int a
+
+instance PositionalGame a c => PositionalGame (BiasedPositionalGame a c) [c] where
+  makeMove (BiasedPositionalGame p q x) player index = BiasedPositionalGame p q <$> foldM (\z w -> makeMove z player w) x index
+  gameOver (BiasedPositionalGame p q x) = gameOver x
+  positions (BiasedPositionalGame p q x) = positions x
+  getPosition (BiasedPositionalGame p q x) = undefined
+  setPosition (BiasedPositionalGame p q x) = undefined
+
+
+data CombinedPositionalGames a b i j = CombinedPositionalGames a b
+
+instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPositionalGames a b i j) (Either i j) where
+  makeMove (CombinedPositionalGames x y) player index = case index of
+    Left i -> flip CombinedPositionalGames y <$> makeMove x player i
+    Right i -> CombinedPositionalGames x <$> makeMove y player i
+  gameOver (CombinedPositionalGames x y) = gameOver x <|> gameOver y
+  positions (CombinedPositionalGames x y) = positions x ++ positions y
+  getPosition (CombinedPositionalGames x y) = undefined
+  setPosition (CombinedPositionalGames x y) = undefined
+
+
+player1WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player1WinsIf pred x = if pred x
+  then Just $ Just Player1
+  else Nothing
+
+drawIf :: (a -> Bool) -> (a -> Maybe (Maybe Player))
+drawIf pred x = if pred x
+  then Just Nothing
+  else Nothing
+
+-- combine two criterions
+(+|+) :: (a -> Maybe (Maybe Player))
+      -> (a -> Maybe (Maybe Player))
+      -> (a -> Maybe (Maybe Player))
+crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
+  (Just x, Just y) | x /= y -> error "conflicting result"
+  (x, y) -> x <|> y
+
+criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)
+criteria fs = foldl1 (+|+) fs
+
+criteriaBool :: [a -> Bool] -> a -> Bool
+criteriaBool fs x = or $ (map (\f -> f x) fs)
+
+symmetric :: (a -> a) -> (a -> Maybe (Maybe Player)) -> a -> Maybe (Maybe Player)
+symmetric flipState criterion = criterion +|+ (\state -> (nextPlayer <$>) <$> (criterion $ flipState state))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

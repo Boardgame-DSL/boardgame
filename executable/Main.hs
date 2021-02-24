@@ -25,6 +25,7 @@ import Data.Map (
   , lookup
   , member
   , (!)
+  , adjust
   )
 import Data.Maybe (fromJust, isJust, fromMaybe)
 import MyLib (
@@ -34,6 +35,11 @@ import MyLib (
   , player
   , takeEmptyMakeMove
   , nextPlayer
+  , drawIf
+  , player1WinsIf
+  , criteriaBool
+  , criteria
+  , symmetric
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -44,6 +50,7 @@ import Data.Foldable (toList)
 
 import Math.Geometry.Grid as Grid
 import Math.Geometry.Grid.Hexagonal
+import ColoredGraph hiding (path)
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -313,7 +320,7 @@ positionToVertex pos = fromMaybe (-1) (elemIndex pos (indices (paraHexGrid hexSi
 getPlayerGraph :: Player -> Hex -> Graph
 getPlayerGraph p b = buildG (0, hexSize*hexSize) $
                       concatMap (\(x, y) -> zip (repeat x) y) $
-                        zip (map positionToVertex playerPos) 
+                        zip (map positionToVertex playerPos)
                             (map ((map positionToVertex . (`intersect` playerPos)) . neighbours (paraHexGrid hexSize hexSize)) playerPos)
   where playerPos = getPlayerPositions p b
 
@@ -324,92 +331,52 @@ getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip
 -- * Havannah
 -------------------------------------------------------------------------------
 
-newtype Havannah = Havannah (Graph, [Maybe Player])
+newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) String)
 
 instance Show Havannah where
-  show (Havannah (g, b)) = show b
+  show (Havannah g) = show g
 
-instance PositionalGame Havannah Int where
-  getPosition (Havannah (g, b)) i = if i < length b
-                                     then Just $ b !! i
-                                     else Nothing
-  positions (Havannah (g, b)) = b
-  setPosition (Havannah (g, b)) i p = if i < length b
-                                     then Just $ Havannah (g, take i b ++ Just p : drop (i+1) b)
-                                     else Nothing
+instance PositionalGame Havannah (Int, Int) where
+  getPosition (Havannah g) i = fst <$> lookup i g
+  positions (Havannah g) = values g
+  setPosition (Havannah g) i p = if member i g
+    then Just $ Havannah $ adjust (\(_, xs) -> (Just p, xs)) i g
+    else Nothing
   makeMove = takeEmptyMakeMove
-  gameOver (Havannah (g, b)) = Just <$> (symmetric (bridgeCriterion g . pieces Player1)
-                           +|+ symmetric (forkCriterion g . pieces Player1)
-                           +|+ symmetric (ringCriterion g . pieces Player1)) b
 
-pieces :: Player -> [Maybe Player] -> [Bool]
-pieces p s = (== Just p) <$> s
+  gameOver (Havannah g) = criterion g
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped
+        symmetric (mapValues (nextPlayer <$>)) $
+        criteria -- We use this to combine our winning criterion and our drawing criterion.
+          [ player1WinsIf (criteriaBool -- Player1 wins if any of these 3 criteria are satisfied.
+              [ bridgeCriterion
+              , forkCriterion
+              , ringCriterion
+              ] . mapValues (== Just Player1)) -- We only need to know what tiles are owned by Player1.
+          , drawIf (all isJust . values) -- It's a draw if all tiles are owned.
+          ]
 
-dirToUndir :: [(Int, Int)] -> [(Int, Int)]
-dirToUndir e = e ++ (swap <$> e)
+bridgeCriterion :: Ord i => ColoredGraph i Bool b -> Bool
+bridgeCriterion g = any (\z -> length (intersect z cornerNodes) >= 2) $ componentsPred (\x _ -> x) g
+  where
+    cornerNodes = nodesPred (\_ neighbours -> length neighbours == 3) g
 
+forkCriterion :: Ord i => ColoredGraph i Bool b -> Bool
+forkCriterion g = any (\z -> length (filter (not . Prelude.null . intersect z) edgeComponents) >= 3) $ componentsPred (\x _ -> x) g
+  where
+    edgeComponents = componentsPred (\_ neighbours -> length neighbours == 4) g
 
-(+|+) :: (a -> Maybe Player)
-      -> (a -> Maybe Player)
-      -> (a -> Maybe Player)
-crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
-  (Just p1, Just p2) | p1 == p2 -> Just p1
-  (Just _, Just _) -> error "conflicting winner"
-  (p1, p2) -> p1 <|> p2
-
-
-symmetric :: ([Maybe Player] -> Bool) -> [Maybe Player] -> Maybe Player
-symmetric criterion state = case (criterion state, criterion (fmap nextPlayer <$> state)) of
-  (True, True) -> error "conflicting winner"
-  (True, False) -> Just Player1
-  (False, True) -> Just Player2
-  (False, False) -> Nothing
+ringCriterion :: Ord i => ColoredGraph i Bool b -> Bool
+ringCriterion g = any (Prelude.null . intersect borderNodes) $ componentsPred (\x _ -> not x) g
+  where
+    borderNodes = nodesPred (\_ neighbours -> length neighbours <= 4) g
 
 emptyHavannah :: Int -> Havannah
-emptyHavannah n = Havannah (g, replicate (length $ vertices g) Nothing)
-  where
-    g = buildG (0, 3*n*(n-1)) (dirToUndir $ hexagonalEdges n)
-
-    hexagonalEdges n = (\(x, y) -> (fromJust $ elemIndex x nodes, fromJust $ elemIndex y nodes)) <$> Grid.edges grid
-
-    grid = hexHexGrid n
-    nodes = indices grid
-
-
-filterGraphE :: ((Int, Int) -> Bool) -> Graph -> Graph
-filterGraphE f g = buildG (0, (length $ vertices g) - 1) (filter f $ Graph.edges g)
-
-filterGraphN :: (Int -> Bool) -> Graph -> Graph
-filterGraphN f = filterGraphE (\(i, j) -> f i && f j)
-
-combinations :: Int -> [a] -> [[a]]
-combinations k ns = filter ((k==).length) $ subsequences ns
-
-bridgeCriterion :: Graph -> [Bool] -> Bool
-bridgeCriterion g state = or [ path filteredG i j | [i, j] <- combinations 2 corners ]
-  where
-    -- the corners are the nodes which are only reachable by 3 nodes
-    corners = filter (\z -> indegree g Data.Array.! z == 3) $ toList $ vertices g
-    filteredG = filterGraphN (state !!) g
-
-forkCriterion :: Graph -> [Bool] -> Bool
-forkCriterion g state = or
-    [ path filteredG i j && path filteredG j k | [is, js, ks] <- combinations 3 edgesNodes, i <- is, j <- js, k <- ks ]
-  where
-    isEdge = (\z -> indegree g Data.Array.! z == 4)
-    edgesNodes = filter (all isEdge) $ toList <$> (scc $ filterGraphN isEdge g)
-
-    filteredG = filterGraphN (state !!) g
-
-
-ringCriterion :: Graph -> [Bool] -> Bool
-ringCriterion g state = any (\tree -> all (\n -> not (n `elem` tree)) outerNodes)
-                        $ filter (not . any (state !!))
-                        $ toList <$> scc filteredG
-  where
-    (innerNodes, outerNodes) = partition (\z -> indegree g Data.Array.! z == 6) $ toList $ vertices g
-    filteredG = filterGraphN (not . (state !!)) g
-
+emptyHavannah 2 = Havannah testGraph
+emptyHavannah n = undefined
 -------------------------------------------------------------------------------
 -- * CLI interactions
 -------------------------------------------------------------------------------
@@ -431,7 +398,7 @@ main = do
     3 -> player $ createShannonSwitchingGame 5
     4 -> player emptyGale
     5 -> player emptyHex
-    6 -> player $ emptyHavannah 8
+    6 -> player $ emptyHavannah 2
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
