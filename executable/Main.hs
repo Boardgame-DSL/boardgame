@@ -4,7 +4,6 @@
 
 module Main where
 
-import System.Info (arch, os)
 import Data.Graph (Graph, buildG, path)
 import Data.List (
     elemIndex
@@ -34,9 +33,6 @@ import MyLib (
   , patternMatchingGameOver
   , playIO
   , takeEmptyMakeMove
-#ifdef WASM
-  , playWeb
-#endif
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -48,6 +44,7 @@ import Math.Geometry.Grid.Hexagonal
 import qualified Data.Vector as V ((!), fromList)
 import Data.Aeson
 import Data.Aeson.Types
+import MyLib.Web (playWeb)
 #endif
 
 -------------------------------------------------------------------------------
@@ -351,8 +348,6 @@ main = playWeb emptyTicTacToe
 #else
 main :: IO ()
 main = do
-  print os
-  print arch
   putStrLn "1: TicTacToe"
   putStrLn "2: Arithmetic Progression Game"
   putStrLn "3: Shannon Switching Game"
