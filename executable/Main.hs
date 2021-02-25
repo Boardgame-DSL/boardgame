@@ -44,7 +44,7 @@ import Math.Geometry.Grid.Hexagonal
 import qualified Data.Vector as V ((!), fromList)
 import Data.Aeson
 import Data.Aeson.Types
-import MyLib.Web (playWeb)
+import MyLib.Web (webDefaultMain)
 #endif
 
 -------------------------------------------------------------------------------
@@ -344,7 +344,7 @@ getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip
 
 #ifdef WASM
 main :: IO ()
-main = playWeb emptyTicTacToe
+main = webDefaultMain emptyTicTacToe
 #else
 main :: IO ()
 main = do
