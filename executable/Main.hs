@@ -37,6 +37,7 @@ import MyLib (
   , nextPlayer
   , drawIf
   , player1WinsIf
+  , player2WinsIf
   , criteriaBool
   , criteria
   , symmetric
@@ -267,26 +268,22 @@ instance PositionalGame Gale (Integer, Integer) where
 hexSize :: Int
 hexSize = 5
 
-newtype Hex = Hex (Map (Int, Int) (Maybe Player))
+data Hex = Hex Int (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
 
-emptyHex :: Hex
-emptyHex = Hex $
-  fromDistinctAscList $
-    zip
-      (indices (paraHexGrid hexSize hexSize))
-      (repeat Nothing)
+emptyHex :: Int -> Hex
+emptyHex n = Hex n $ paraHexGraph n
 
 instance Show Hex where
-  show (Hex b) =
+  show (Hex n b) =
     replicate (2*(hexSize-1)) ' ' ++ concat (replicate hexSize "  _ ") ++ "\n"
     ++
-    intercalate "\n" [intercalate "\n" (gridShowLine (Hex b) r) | r <- [0..hexSize-1]]
+    intercalate "\n" [intercalate "\n" (gridShowLine (Hex n b) r) | r <- [0..hexSize-1]]
     ++
     "\n" ++ concat (replicate hexSize " \\_/")
 
 gridShowLine :: Hex -> Int -> [String]
-gridShowLine (Hex b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
-                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ b ! (x, hexSize-1-y)) [0..(hexSize-1)]) ++ " |"
+gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
+                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, hexSize-1-y) b) [0..(hexSize-1)]) ++ " |"
                           ] where
   showP (Just Player1) = "1"
   showP (Just Player2) = "2"
@@ -295,88 +292,61 @@ gridShowLine (Hex b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   tileTop = concat $ replicate hexSize " / \\"
 
 instance PositionalGame Hex (Int, Int) where
-  getPosition (Hex b) = flip lookup b
-  positions (Hex b) = elems b
-  setPosition (Hex b) c p = if member c b then Just $ Hex $ insert c (Just p) b else Nothing
+  getPosition (Hex n b) c = fst <$> lookup c b
+  positions (Hex n b) = values b
+  setPosition (Hex n b) c p = if member c b
+    then Just $ Hex n $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
   makeMove = takeEmptyMakeMove
-  gameOver (Hex b)
-    | True `elem` (map (\(x, y) -> path (getPlayerGraph Player1 (Hex b)) x y) (edgePaths Player1)) = Just (Just Player1)
-    | True `elem` (map (\(x, y) -> path (getPlayerGraph Player2 (Hex b)) x y) (edgePaths Player2)) = Just (Just Player2)
-    | otherwise = Nothing
-
-edgeVertexes :: Player -> ([Int], [Int])
-edgeVertexes Player1 = ([positionToVertex (x, 0) | x <- [0..hexSize-1]], [positionToVertex (x,hexSize-1) | x <- [0..hexSize-1]])
-edgeVertexes Player2 = ([positionToVertex (0, y) | y <- [0..hexSize-1]], [positionToVertex (hexSize-1,y) | y <- [0..hexSize-1]])
-
-edgePaths :: Player -> [(Int,Int)]
-edgePaths p = [(v1, v2) | v1 <- ev1, v2 <- ev2, v1 /= v2]
-  where ev1 = fst (edgeVertexes p)
-        ev2 = snd (edgeVertexes p)
-
-
-positionToVertex :: (Int, Int) -> Int
-positionToVertex pos = fromMaybe (-1) (elemIndex pos (indices (paraHexGrid hexSize hexSize)))
-
-getPlayerGraph :: Player -> Hex -> Graph
-getPlayerGraph p b = buildG (0, hexSize*hexSize) $
-                      concatMap (\(x, y) -> zip (repeat x) y) $
-                        zip (map positionToVertex playerPos)
-                            (map ((map positionToVertex . (`intersect` playerPos)) . neighbours (paraHexGrid hexSize hexSize)) playerPos)
-  where playerPos = getPlayerPositions p b
-
-getPlayerPositions :: Player -> Hex -> [(Int,Int)]
-getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip (keys b) (elems b))
+  gameOver (Hex n b) = criterion b
+    where
+      criterion =
+        criteria
+          [ player1WinsIf (anyConnections (==2) [left, right]) . mapValues (==Just Player1) -- There is a connection between 2 components, the left and right.
+          , player2WinsIf (anyConnections (==2) [top, bottom]) . mapValues (==Just Player2) -- There is a connection between 2 components, the top and bottom.
+          ]
+      left = [(0,i) | i <- [0..n-1]]
+      right = [(n-1,i) | i <- [0..n-1]]
+      top = [(i,0) | i <- [0..n-1]]
+      bottom = [(i,n-1) | i <- [0..n-1]]
 
 -------------------------------------------------------------------------------
 -- * Havannah
 -------------------------------------------------------------------------------
 
-newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) String)
+newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
 
 instance Show Havannah where
-  show (Havannah g) = show g
+  show (Havannah b) = show b
 
 instance PositionalGame Havannah (Int, Int) where
-  getPosition (Havannah g) i = fst <$> lookup i g
-  positions (Havannah g) = values g
-  setPosition (Havannah g) i p = if member i g
-    then Just $ Havannah $ adjust (\(_, xs) -> (Just p, xs)) i g
+  getPosition (Havannah b) c = fst <$> lookup c b
+  positions (Havannah b) = values b
+  setPosition (Havannah b) c p = if member c b
+    then Just $ Havannah $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
   makeMove = takeEmptyMakeMove
 
-  gameOver (Havannah g) = criterion g
+  gameOver (Havannah b) = criterion b
     where
       criterion =
         -- Here we say that in any position where one player wins,
-        -- the other player would win instead if the pieces were swapped
+        -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues (nextPlayer <$>)) $
         criteria -- We use this to combine our winning criterion and our drawing criterion.
           [ player1WinsIf (criteriaBool -- Player1 wins if any of these 3 criteria are satisfied.
-              [ bridgeCriterion
-              , forkCriterion
-              , ringCriterion
-              ] . mapValues (== Just Player1)) -- We only need to know what tiles are owned by Player1.
+              [ anyConnections (>=2) corners . mapValues (==Just Player1) -- Player1 has connected 2 corners.
+              , anyConnections (>=3) edges . mapValues (==Just Player1) -- player1 has connecteed 3 edges (excluding the corners).
+              , anyConnections (==0) border . mapValues (/=Just Player1) -- player1 has surrounded other tiles such that they can't reach the border.
+              ])
           , drawIf (all isJust . values) -- It's a draw if all tiles are owned.
           ]
-
-bridgeCriterion :: Ord i => ColoredGraph i Bool b -> Bool
-bridgeCriterion g = any (\z -> length (intersect z cornerNodes) >= 2) $ componentsPred (\x _ -> x) g
-  where
-    cornerNodes = nodesPred (\_ neighbours -> length neighbours == 3) g
-
-forkCriterion :: Ord i => ColoredGraph i Bool b -> Bool
-forkCriterion g = any (\z -> length (filter (not . Prelude.null . intersect z) edgeComponents) >= 3) $ componentsPred (\x _ -> x) g
-  where
-    edgeComponents = componentsPred (\_ neighbours -> length neighbours == 4) g
-
-ringCriterion :: Ord i => ColoredGraph i Bool b -> Bool
-ringCriterion g = any (Prelude.null . intersect borderNodes) $ componentsPred (\x _ -> not x) g
-  where
-    borderNodes = nodesPred (\_ neighbours -> length neighbours <= 4) g
+      corners = componentsPred (\_ neighbours -> length neighbours == 3) b
+      edges = componentsPred (\_ neighbours -> length neighbours == 4) b
+      border = corners ++ edges
 
 emptyHavannah :: Int -> Havannah
-emptyHavannah 2 = Havannah testGraph
-emptyHavannah n = undefined
+emptyHavannah = Havannah . hexHexGraph
 -------------------------------------------------------------------------------
 -- * CLI interactions
 -------------------------------------------------------------------------------
@@ -397,8 +367,8 @@ main = do
     2 -> playAPG
     3 -> player $ createShannonSwitchingGame 5
     4 -> player emptyGale
-    5 -> player emptyHex
-    6 -> player $ emptyHavannah 2
+    5 -> player $ emptyHex 5
+    6 -> player $ emptyHavannah 8
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()

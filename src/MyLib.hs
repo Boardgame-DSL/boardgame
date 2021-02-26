@@ -9,6 +9,7 @@ module MyLib (
   , patternMatchingGameOver
   , drawIf
   , player1WinsIf
+  , player2WinsIf
   , criteriaBool
   , criteria
   , symmetric
@@ -126,9 +127,18 @@ instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPos
   setPosition (CombinedPositionalGames x y) = undefined
 
 
+
+
+
+
 player1WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
 player1WinsIf pred x = if pred x
   then Just $ Just Player1
+  else Nothing
+
+player2WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player2WinsIf pred x = if pred x
+  then Just $ Just Player2
   else Nothing
 
 drawIf :: (a -> Bool) -> (a -> Maybe (Maybe Player))
@@ -136,7 +146,7 @@ drawIf pred x = if pred x
   then Just Nothing
   else Nothing
 
--- combine two criterions
+-- combine two criteria.
 (+|+) :: (a -> Maybe (Maybe Player))
       -> (a -> Maybe (Maybe Player))
       -> (a -> Maybe (Maybe Player))
@@ -144,12 +154,15 @@ crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
   (Just x, Just y) | x /= y -> error "conflicting result"
   (x, y) -> x <|> y
 
+-- combine several criteria.
 criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)
 criteria fs = foldl1 (+|+) fs
 
+-- combine several boolean criteria.
 criteriaBool :: [a -> Bool] -> a -> Bool
 criteriaBool fs x = or $ (map (\f -> f x) fs)
 
+-- create a symmetric game from a game defined for only one player.
 symmetric :: (a -> a) -> (a -> Maybe (Maybe Player)) -> a -> Maybe (Maybe Player)
 symmetric flipState criterion = criterion +|+ (\state -> (nextPlayer <$>) <$> (criterion $ flipState state))
 
