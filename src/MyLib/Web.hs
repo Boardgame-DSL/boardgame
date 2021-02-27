@@ -17,13 +17,13 @@ import MyLib (
 
 foreign import javascript "wrapper" jsMakeCallback :: IO () -> IO JSVal
 
-foreign import javascript "boardgame.putState($1)" jsPutState :: JSVal -> IO ()
-foreign import javascript "boardgame.putTurn($1)" jsPutTurn :: Int -> IO ()
-foreign import javascript safe "boardgame.getMove()" jsGetMove :: IO JSVal
-foreign import javascript "boardgame.putInvalidInput()" jsPutInvalidInput :: IO ()
-foreign import javascript "boardgame.putInvalidMove()" jsPutInvalidMove :: IO ()
-foreign import javascript "boardgame.putGameOver($1)" jsPutGameOver :: Int -> IO ()
-foreign import javascript "boardgame.game = $1" jsSetGame :: JSVal -> IO ()
+foreign import javascript "boardgame._putState($1)" jsPutState :: JSVal -> IO ()
+foreign import javascript "boardgame._putTurn($1)" jsPutTurn :: Int -> IO ()
+foreign import javascript safe "boardgame._getMove()" jsGetMove :: IO JSVal
+foreign import javascript "boardgame._putInvalidInput()" jsPutInvalidInput :: IO ()
+foreign import javascript "boardgame._putInvalidMove()" jsPutInvalidMove :: IO ()
+foreign import javascript "boardgame._putGameOver($1)" jsPutGameOver :: Int -> IO ()
+foreign import javascript "boardgame.startGame = $1" jsSetGame :: JSVal -> IO ()
 foreign import javascript "boardgame._ready()" jsReady :: IO ()
 
 -- | A main function for running games as a we app. Initializes the game and
