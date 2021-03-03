@@ -315,6 +315,11 @@ instance Show Hex where
     ++
     "\n" ++ concat (replicate hexSize " \\_/")
 
+#ifdef WASM
+instance ToJSON Hex where
+  toJSON (Hex _ m) = toJSON m
+#endif
+
 gridShowLine :: Hex -> Int -> [String]
 gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
                           ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, hexSize-1-y) b) [0..(hexSize-1)]) ++ " |"
@@ -482,7 +487,7 @@ emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
 
 #ifdef WASM
 main :: IO ()
-main = webDefaultMain emptyTicTacToe
+main = webDefaultMain $ emptyHex 5
 #else
 main :: IO ()
 main = do
