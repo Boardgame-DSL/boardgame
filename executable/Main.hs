@@ -4,7 +4,7 @@
 
 module Main where
 
-import Data.Graph (Graph, buildG, path)
+import Data.Graph as Graph (Graph, buildG, path, vertices, indegree, scc, edges)
 import Data.List (
     elemIndex
   , find
@@ -12,6 +12,8 @@ import Data.List (
   , intersect
   , nub
   , intercalate
+  , partition
+  , subsequences
   )
 import Data.Map (
     Map
@@ -20,11 +22,11 @@ import Data.Map (
   , keys
   , fromDistinctAscList
   , fromList
-  , toList
   , insert
   , lookup
   , member
   , (!)
+  , adjust
   )
 import Data.Maybe (fromJust, isJust, fromMaybe)
 import MyLib (
@@ -33,12 +35,19 @@ import MyLib (
   , patternMatchingGameOver
   , playIO
   , takeEmptyMakeMove
+  , nextPlayer
+  , drawIf
+  , player1WinsIf
+  , player2WinsIf
+  , criteria
+  , symmetric, player1LosesIf, but
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
-
-import Math.Geometry.Grid
-import Math.Geometry.Grid.Hexagonal
+import Control.Applicative ((<|>))
+import Data.Tuple (swap)
+import qualified Data.Array ((!))
+import Data.Foldable (toList)
 
 #ifdef WASM
 import qualified Data.Vector as V ((!), fromList)
@@ -47,6 +56,21 @@ import Data.Aeson.Types
 import MyLib.Web (webDefaultMain)
 #endif
 
+import Math.Geometry.Grid as Grid ()
+import Math.Geometry.Grid.Hexagonal ()
+import ColoredGraph (
+    ColoredGraph
+  , paraHexGraph
+  , values
+  , anyConnections
+  , mapValues
+  , filterValues
+  , filterG
+  , components
+  , hexHexGraph
+  , mapEdges
+  , rectOctGraph
+  , inARow)
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -278,26 +302,22 @@ instance PositionalGame Gale (Integer, Integer) where
 hexSize :: Int
 hexSize = 5
 
-newtype Hex = Hex (Map (Int, Int) (Maybe Player))
+data Hex = Hex Int (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
 
-emptyHex :: Hex
-emptyHex = Hex $
-  fromDistinctAscList $
-    zip
-      (indices (paraHexGrid hexSize hexSize))
-      (repeat Nothing)
+emptyHex :: Int -> Hex
+emptyHex n = Hex n $ paraHexGraph n
 
 instance Show Hex where
-  show (Hex b) =
+  show (Hex n b) =
     replicate (2*(hexSize-1)) ' ' ++ concat (replicate hexSize "  _ ") ++ "\n"
     ++
-    intercalate "\n" [intercalate "\n" (gridShowLine (Hex b) r) | r <- [0..hexSize-1]]
+    intercalate "\n" [intercalate "\n" (gridShowLine (Hex n b) r) | r <- [0..hexSize-1]]
     ++
     "\n" ++ concat (replicate hexSize " \\_/")
 
 gridShowLine :: Hex -> Int -> [String]
-gridShowLine (Hex b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
-                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ b ! (x, hexSize-1-y)) [0..(hexSize-1)]) ++ " |"
+gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
+                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, hexSize-1-y) b) [0..(hexSize-1)]) ++ " |"
                           ] where
   showP (Just Player1) = "1"
   showP (Just Player2) = "2"
@@ -306,37 +326,155 @@ gridShowLine (Hex b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   tileTop = concat $ replicate hexSize " / \\"
 
 instance PositionalGame Hex (Int, Int) where
-  getPosition (Hex b) = flip lookup b
-  positions (Hex b) = elems b
-  setPosition (Hex b) c p = if member c b then Just $ Hex $ insert c (Just p) b else Nothing
+  getPosition (Hex n b) c = fst <$> lookup c b
+  positions (Hex n b) = values b
+  setPosition (Hex n b) c p = if member c b
+    then Just $ Hex n $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
   makeMove = takeEmptyMakeMove
-  gameOver (Hex b)
-    | True `elem` (map (\(x, y) -> path (getPlayerGraph Player1 (Hex b)) x y) (edgePaths Player1)) = Just (Just Player1)
-    | True `elem` (map (\(x, y) -> path (getPlayerGraph Player2 (Hex b)) x y) (edgePaths Player2)) = Just (Just Player2)
-    | otherwise = Nothing
+  gameOver (Hex n b) = criterion b
+    where
+      criterion =
+        criteria
+          -- There is a connection between 2 components, the left and right.
+          [ player1WinsIf (anyConnections (==2) [left, right]) . mapValues (==Just Player1)
+           -- There is a connection between 2 components, the top and bottom.
+          , player2WinsIf (anyConnections (==2) [top, bottom]) . mapValues (==Just Player2)
+          ]
+      left   = [(0,  i) | i <- [0..n-1]]
+      right  = [(n-1,i) | i <- [0..n-1]]
+      top    = [(i,  0) | i <- [0..n-1]]
+      bottom = [(i,n-1) | i <- [0..n-1]]
 
-edgeVertexes :: Player -> ([Int], [Int])
-edgeVertexes Player1 = ([positionToVertex (x, 0) | x <- [0..hexSize-1]], [positionToVertex (x,hexSize-1) | x <- [0..hexSize-1]])
-edgeVertexes Player2 = ([positionToVertex (0, y) | y <- [0..hexSize-1]], [positionToVertex (hexSize-1,y) | y <- [0..hexSize-1]])
+-------------------------------------------------------------------------------
+-- * Havannah
+-------------------------------------------------------------------------------
 
-edgePaths :: Player -> [(Int,Int)]
-edgePaths p = [(v1, v2) | v1 <- ev1, v2 <- ev2, v1 /= v2]
-  where ev1 = fst (edgeVertexes p)
-        ev2 = snd (edgeVertexes p)
+newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
+
+instance Show Havannah where
+  show (Havannah b) = show b
+
+instance PositionalGame Havannah (Int, Int) where
+  getPosition (Havannah b) c = fst <$> lookup c b
+  positions (Havannah b) = values b
+  setPosition (Havannah b) c p = if member c b
+    then Just $ Havannah $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (Havannah b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues (nextPlayer <$>)) $
+        criteria -- We use this to combine our winning criterion and our drawing criterion.
+          [ criteria $ player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
+                -- Player1 has connected 2 corners.
+              [ anyConnections (>=2) corners . filterValues (== Just Player1)
+                -- player1 has connecteed 3 edges (excluding the corners).
+              , anyConnections (>=3) edges . filterValues (== Just Player1)
+                -- player1 has surrounded other tiles such that they can't reach the border.
+              , anyConnections (==0) border . filterValues (/= Just Player1)
+              ]
+          , drawIf (all isJust . values) -- It's a draw if all tiles are owned.
+          ]
+      corners = components $ filterG ((==3) . length . snd) b
+      edges   = components $ filterG ((==4) . length . snd) b
+      border = corners ++ edges
+
+emptyHavannah :: Int -> Havannah
+emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
+
+-------------------------------------------------------------------------------
+-- * Yavalath
+-------------------------------------------------------------------------------
+
+newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
+
+instance Show Yavalath where
+  show (Yavalath b) = show b
+
+instance PositionalGame Yavalath (Int, Int) where
+  getPosition (Yavalath b) c = fst <$> lookup c b
+  positions (Yavalath b) = values b
+  setPosition (Yavalath b) c p = if member c b
+    then Just $ Yavalath $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (Yavalath b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues $ fmap nextPlayer) $
+          criteria
+            -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
+            -- It's important we use `but` here because otherwise we could have conflicting
+            -- outcomes from having both 3 in a row and 4 in a row at the same time.
+          [ criteria (player1LosesIf . inARow (==3) <$> directions) `but` criteria (player1WinsIf . inARow (>=4) <$> directions)
+          , drawIf $ all isJust . values -- It's a draw if all tiles are owned.
+          ]
+
+      directions = ["vertical", "diagonal1", "diagonal2"]
 
 
-positionToVertex :: (Int, Int) -> Int
-positionToVertex pos = fromMaybe (-1) (elemIndex pos (indices (paraHexGrid hexSize hexSize)))
 
-getPlayerGraph :: Player -> Hex -> Graph
-getPlayerGraph p b = buildG (0, hexSize*hexSize) $
-                      concatMap (\(x, y) -> zip (repeat x) y) $
-                        zip (map positionToVertex playerPos) 
-                            (map ((map positionToVertex . (`intersect` playerPos)) . neighbours (paraHexGrid hexSize hexSize)) playerPos)
-  where playerPos = getPlayerPositions p b
+emptyYavalath :: Int -> Yavalath
+emptyYavalath = Yavalath . mapEdges dirName . hexHexGraph
+  where
+    dirName (1,0) = "vertical"
+    dirName (-1,0) = "vertical"
+    dirName (1,-1) = "diagonal1"
+    dirName (-1,1) = "diagonal1"
+    dirName (0,-1) = "diagonal2"
+    dirName (0,1) = "diagonal2"
 
-getPlayerPositions :: Player -> Hex -> [(Int,Int)]
-getPlayerPositions p (Hex b) = keys $ fromList $ filter ((== Just p) . snd) (zip (keys b) (elems b))
+-------------------------------------------------------------------------------
+-- * mnk-game
+-------------------------------------------------------------------------------
+
+data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
+
+instance Show MNKGame where
+  show (MNKGame k b) = show b
+
+instance PositionalGame MNKGame (Int, Int) where
+  getPosition (MNKGame k b) c = fst <$> lookup c b
+  positions (MNKGame k b) = values b
+  setPosition (MNKGame k b) c p = if member c b
+    then Just $ MNKGame k $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (MNKGame k b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues $ fmap nextPlayer) $
+          criteria
+          [ drawIf $ all isJust . values -- It's a draw if all tiles are owned.
+          , criteria $ player1WinsIf . inARow (>=k) <$> directions -- Player1 wins if there are k or more pieces in a row in any direction.
+          ]
+
+      directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
+
+
+
+emptyMNKGame :: Int -> Int -> Int -> MNKGame
+emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
+  where
+    dirName (1,0) = "horizontal"
+    dirName (-1,0) = "horizontal"
+    dirName (0,-1) = "vertical"
+    dirName (0,1) = "vertical"
+    dirName (1,-1) = "diagonal1"
+    dirName (-1,1) = "diagonal1"
+    dirName (1,1) = "diagonal2"
+    dirName (-1,-1) = "diagonal2"
 
 -------------------------------------------------------------------------------
 -- * CLI interactions
@@ -353,6 +491,8 @@ main = do
   putStrLn "3: Shannon Switching Game"
   putStrLn "4: Gale"
   putStrLn "5: Hex"
+  putStrLn "6: Havannah"
+  putStrLn "7: Yavalath"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -363,7 +503,9 @@ main = do
     2 -> playAPG
     3 -> playIO $ createShannonSwitchingGame 5
     4 -> playIO emptyGale
-    5 -> playIO emptyHex
+    5 -> playIO $ emptyHex 5
+    6 -> playIO $ emptyHavannah 8
+    7 -> playIO $ emptyYavalath 8
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
