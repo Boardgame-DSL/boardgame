@@ -33,6 +33,7 @@ library
     build-depends:
         aeson >= 1.4
       , asterius-prelude == 0.0.1
+      , scientific >= 0.3
     CPP-options: "-DWASM"
 
 executable boardgame

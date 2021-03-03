@@ -7,6 +7,7 @@ module MyLib (
   , PositionalGame(..)
   , nextPlayer
   , play
+  , playerToInt
   , playIO
   , takeEmptyMakeMove
   , patternMatchingGameOver
@@ -27,6 +28,10 @@ import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
+#ifdef WASM
+import Data.Aeson (ToJSON(toJSON), Value(Number))
+import Data.Scientific (fromFloatDigits)
+#endif
 
 -- | Represents one of the two players.
 data Player = Player1 | Player2
@@ -36,6 +41,16 @@ data Player = Player1 | Player2
 nextPlayer :: Player -> Player
 nextPlayer Player1 = Player2
 nextPlayer Player2 = Player1
+
+-- | Turns a 'Player' into an int. 1 or 2 for the player respectively.
+playerToInt :: Player -> Int
+playerToInt Player1 = 1
+playerToInt Player2 = 2
+
+#ifdef WASM
+instance ToJSON Player where
+  toJSON = Number . fromFloatDigits . fromIntegral . playerToInt
+#endif
 
 -- | A type class for positional games where `a` is the game itself and `c` is
 --   its accompanying "coordinate" type.
