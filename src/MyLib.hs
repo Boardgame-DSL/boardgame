@@ -10,19 +10,19 @@ module MyLib (
   , drawIf
   , player1WinsIf
   , player2WinsIf
-  , criteriaBool
+  , player1LosesIf
+  , player2LosesIf
   , criteria
   , symmetric
+  , but
 ) where
 
-import Control.Monad (join)
 import Data.List (find, intercalate)
 import Data.Maybe (isJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
-import Control.Monad (foldM)
+import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
-import ColoredGraph
 
 -- | Represents one of the two players.
 data Player = Player1 | Player2
@@ -136,10 +136,16 @@ player1WinsIf pred x = if pred x
   then Just $ Just Player1
   else Nothing
 
+player2LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player2LosesIf = player1WinsIf
+
 player2WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
 player2WinsIf pred x = if pred x
   then Just $ Just Player2
   else Nothing
+
+player1LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player1LosesIf = player2WinsIf
 
 drawIf :: (a -> Bool) -> (a -> Maybe (Maybe Player))
 drawIf pred x = if pred x
@@ -154,17 +160,19 @@ crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
   (Just x, Just y) | x /= y -> error "conflicting result"
   (x, y) -> x <|> y
 
+-- override the first criterion with the second criterion.
+but :: (a -> Maybe (Maybe Player))
+    -> (a -> Maybe (Maybe Player))
+    -> (a -> Maybe (Maybe Player))
+but crit1 crit2 x = crit2 x <|> crit1 x
+
 -- combine several criteria.
 criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)
-criteria fs = foldl1 (+|+) fs
-
--- combine several boolean criteria.
-criteriaBool :: [a -> Bool] -> a -> Bool
-criteriaBool fs x = or $ (map (\f -> f x) fs)
+criteria = foldl1 (+|+)
 
 -- create a symmetric game from a game defined for only one player.
 symmetric :: (a -> a) -> (a -> Maybe (Maybe Player)) -> a -> Maybe (Maybe Player)
-symmetric flipState criterion = criterion +|+ (\state -> (nextPlayer <$>) <$> (criterion $ flipState state))
+symmetric flipState criterion = criterion +|+ (fmap (fmap nextPlayer) . criterion . flipState)
 
 
 

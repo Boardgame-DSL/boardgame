@@ -38,9 +38,8 @@ import MyLib (
   , drawIf
   , player1WinsIf
   , player2WinsIf
-  , criteriaBool
   , criteria
-  , symmetric
+  , symmetric, player1LosesIf, but
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -49,9 +48,21 @@ import Data.Tuple (swap)
 import qualified Data.Array ((!))
 import Data.Foldable (toList)
 
-import Math.Geometry.Grid as Grid
-import Math.Geometry.Grid.Hexagonal
-import ColoredGraph hiding (path)
+import Math.Geometry.Grid as Grid ()
+import Math.Geometry.Grid.Hexagonal ()
+import ColoredGraph (
+    ColoredGraph
+  , paraHexGraph
+  , values
+  , anyConnections
+  , mapValues
+  , filterValues
+  , filterG
+  , components
+  , hexHexGraph
+  , mapEdges
+  , rectOctGraph
+  , inARow)
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -302,19 +313,21 @@ instance PositionalGame Hex (Int, Int) where
     where
       criterion =
         criteria
-          [ player1WinsIf (anyConnections (==2) [left, right]) . mapValues (==Just Player1) -- There is a connection between 2 components, the left and right.
-          , player2WinsIf (anyConnections (==2) [top, bottom]) . mapValues (==Just Player2) -- There is a connection between 2 components, the top and bottom.
+          -- There is a connection between 2 components, the left and right.
+          [ player1WinsIf (anyConnections (==2) [left, right]) . mapValues (==Just Player1)
+           -- There is a connection between 2 components, the top and bottom.
+          , player2WinsIf (anyConnections (==2) [top, bottom]) . mapValues (==Just Player2)
           ]
-      left = [(0,i) | i <- [0..n-1]]
-      right = [(n-1,i) | i <- [0..n-1]]
-      top = [(i,0) | i <- [0..n-1]]
+      left   = [(0,  i) | i <- [0..n-1]]
+      right  = [(n-1,i) | i <- [0..n-1]]
+      top    = [(i,  0) | i <- [0..n-1]]
       bottom = [(i,n-1) | i <- [0..n-1]]
 
 -------------------------------------------------------------------------------
 -- * Havannah
 -------------------------------------------------------------------------------
 
-newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
+newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
 
 instance Show Havannah where
   show (Havannah b) = show b
@@ -334,19 +347,112 @@ instance PositionalGame Havannah (Int, Int) where
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues (nextPlayer <$>)) $
         criteria -- We use this to combine our winning criterion and our drawing criterion.
-          [ player1WinsIf (criteriaBool -- Player1 wins if any of these 3 criteria are satisfied.
-              [ anyConnections (>=2) corners . mapValues (==Just Player1) -- Player1 has connected 2 corners.
-              , anyConnections (>=3) edges . mapValues (==Just Player1) -- player1 has connecteed 3 edges (excluding the corners).
-              , anyConnections (==0) border . mapValues (/=Just Player1) -- player1 has surrounded other tiles such that they can't reach the border.
-              ])
+          [ criteria $ player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
+                -- Player1 has connected 2 corners.
+              [ anyConnections (>=2) corners . filterValues (== Just Player1)
+                -- player1 has connecteed 3 edges (excluding the corners).
+              , anyConnections (>=3) edges . filterValues (== Just Player1)
+                -- player1 has surrounded other tiles such that they can't reach the border.
+              , anyConnections (==0) border . filterValues (/= Just Player1)
+              ]
           , drawIf (all isJust . values) -- It's a draw if all tiles are owned.
           ]
-      corners = componentsPred (\_ neighbours -> length neighbours == 3) b
-      edges = componentsPred (\_ neighbours -> length neighbours == 4) b
+      corners = components $ filterG ((==3) . length . snd) b
+      edges   = components $ filterG ((==4) . length . snd) b
       border = corners ++ edges
 
 emptyHavannah :: Int -> Havannah
-emptyHavannah = Havannah . hexHexGraph
+emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
+
+-------------------------------------------------------------------------------
+-- * Yavalath
+-------------------------------------------------------------------------------
+
+newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
+
+instance Show Yavalath where
+  show (Yavalath b) = show b
+
+instance PositionalGame Yavalath (Int, Int) where
+  getPosition (Yavalath b) c = fst <$> lookup c b
+  positions (Yavalath b) = values b
+  setPosition (Yavalath b) c p = if member c b
+    then Just $ Yavalath $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (Yavalath b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues $ fmap nextPlayer) $
+          criteria
+            -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
+            -- It's important we use `but` here because otherwise we could have conflicting
+            -- outcomes from having both 3 in a row and 4 in a row at the same time.
+          [ criteria (player1LosesIf . inARow (==3) <$> directions) `but` criteria (player1WinsIf . inARow (>=4) <$> directions)
+          , drawIf $ all isJust . values -- It's a draw if all tiles are owned.
+          ]
+
+      directions = ["vertical", "diagonal1", "diagonal2"]
+
+
+
+emptyYavalath :: Int -> Yavalath
+emptyYavalath = Yavalath . mapEdges dirName . hexHexGraph
+  where
+    dirName (1,0) = "vertical"
+    dirName (-1,0) = "vertical"
+    dirName (1,-1) = "diagonal1"
+    dirName (-1,1) = "diagonal1"
+    dirName (0,-1) = "diagonal2"
+    dirName (0,1) = "diagonal2"
+
+-------------------------------------------------------------------------------
+-- * mnk-game
+-------------------------------------------------------------------------------
+
+data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
+
+instance Show MNKGame where
+  show (MNKGame k b) = show b
+
+instance PositionalGame MNKGame (Int, Int) where
+  getPosition (MNKGame k b) c = fst <$> lookup c b
+  positions (MNKGame k b) = values b
+  setPosition (MNKGame k b) c p = if member c b
+    then Just $ MNKGame k $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (MNKGame k b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues $ fmap nextPlayer) $
+          criteria
+          [ drawIf $ all isJust . values -- It's a draw if all tiles are owned.
+          , criteria $ player1WinsIf . inARow (>=k) <$> directions -- Player1 wins if there are k or more pieces in a row in any direction.
+          ]
+
+      directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
+
+
+
+emptyMNKGame :: Int -> Int -> Int -> MNKGame
+emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
+  where
+    dirName (1,0) = "horizontal"
+    dirName (-1,0) = "horizontal"
+    dirName (0,-1) = "vertical"
+    dirName (0,1) = "vertical"
+    dirName (1,-1) = "diagonal1"
+    dirName (-1,1) = "diagonal1"
+    dirName (1,1) = "diagonal2"
+    dirName (-1,-1) = "diagonal2"
+
 -------------------------------------------------------------------------------
 -- * CLI interactions
 -------------------------------------------------------------------------------
@@ -359,6 +465,7 @@ main = do
   putStrLn "4: Gale"
   putStrLn "5: Hex"
   putStrLn "6: Havannah"
+  putStrLn "7: Yavalath"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -369,6 +476,7 @@ main = do
     4 -> player emptyGale
     5 -> player $ emptyHex 5
     6 -> player $ emptyHavannah 8
+    7 -> player $ emptyYavalath 8
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
