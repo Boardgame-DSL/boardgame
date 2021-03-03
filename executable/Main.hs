@@ -314,9 +314,9 @@ instance PositionalGame Hex (Int, Int) where
       criterion =
         criteria
           -- There is a connection between 2 components, the left and right.
-          [ player1WinsIf (anyConnections (==2) [left, right]) . mapValues (==Just Player1)
+          [ player1WinsIf (anyConnections (==2) [left, right]) . filterValues (==Just Player1)
            -- There is a connection between 2 components, the top and bottom.
-          , player2WinsIf (anyConnections (==2) [top, bottom]) . mapValues (==Just Player2)
+          , player2WinsIf (anyConnections (==2) [top, bottom]) . filterValues (==Just Player2)
           ]
       left   = [(0,  i) | i <- [0..n-1]]
       right  = [(n-1,i) | i <- [0..n-1]]
@@ -391,7 +391,8 @@ instance PositionalGame Yavalath (Int, Int) where
             -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
             -- It's important we use `but` here because otherwise we could have conflicting
             -- outcomes from having both 3 in a row and 4 in a row at the same time.
-          [ criteria (player1LosesIf . inARow (==3) <$> directions) `but` criteria (player1WinsIf . inARow (>=4) <$> directions)
+          [ (criteria (player1LosesIf . inARow (==3) <$> directions)
+            `but` criteria (player1WinsIf . inARow (>=4) <$> directions)) . filterValues (== Just Player1)
           , drawIf $ all isJust . values -- It's a draw if all tiles are owned.
           ]
 
@@ -476,7 +477,7 @@ main = do
     4 -> player emptyGale
     5 -> player $ emptyHex 5
     6 -> player $ emptyHavannah 8
-    7 -> player $ emptyYavalath 8
+    7 -> player $ emptyYavalath 2
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
