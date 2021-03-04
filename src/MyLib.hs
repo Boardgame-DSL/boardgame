@@ -14,7 +14,8 @@ module MyLib (
   , player2LosesIf
   , criteria
   , symmetric
-  , but
+  , unless
+  , ifNotThen
 ) where
 
 import Data.List (find, intercalate)
@@ -160,11 +161,17 @@ crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
   (Just x, Just y) | x /= y -> error "conflicting result"
   (x, y) -> x <|> y
 
+ifNotThen :: (a -> Maybe (Maybe Player))
+    -> (a -> Maybe (Maybe Player))
+    -> (a -> Maybe (Maybe Player))
+ifNotThen crit1 crit2 x = crit1 x <|> crit2 x
+
+infixl 8 `unless`
 -- override the first criterion with the second criterion.
-but :: (a -> Maybe (Maybe Player))
-    -> (a -> Maybe (Maybe Player))
-    -> (a -> Maybe (Maybe Player))
-but crit1 crit2 x = crit2 x <|> crit1 x
+unless :: (a -> Maybe (Maybe Player))
+       -> (a -> Maybe (Maybe Player))
+       -> (a -> Maybe (Maybe Player))
+unless = flip ifNotThen
 
 -- combine several criteria.
 criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)

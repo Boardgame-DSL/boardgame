@@ -39,7 +39,9 @@ import MyLib (
   , player1WinsIf
   , player2WinsIf
   , criteria
-  , symmetric, player1LosesIf, but
+  , symmetric
+  , player1LosesIf
+  , unless
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -346,17 +348,15 @@ instance PositionalGame Havannah (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues (nextPlayer <$>)) $
-        criteria -- We use this to combine our winning criterion and our drawing criterion.
-          [ criteria $ player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
-                -- Player1 has connected 2 corners.
-              [ anyConnections (>=2) corners . filterValues (== Just Player1)
-                -- player1 has connecteed 3 edges (excluding the corners).
-              , anyConnections (>=3) edges . filterValues (== Just Player1)
-                -- player1 has surrounded other tiles such that they can't reach the border.
-              , anyConnections (==0) border . filterValues (/= Just Player1)
-              ]
-          , drawIf (all isJust . values) -- It's a draw if all tiles are owned.
-          ]
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
+        criteria (player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
+            -- Player1 has connected 2 corners.
+          [ anyConnections (>=2) corners . filterValues (== Just Player1)
+            -- player1 has connecteed 3 edges (excluding the corners).
+          , anyConnections (>=3) edges . filterValues (== Just Player1)
+            -- player1 has surrounded other tiles such that they can't reach the border.
+          , anyConnections (==0) border . filterValues (/= Just Player1)
+          ])
       corners = components $ filterG ((==3) . length . snd) b
       edges   = components $ filterG ((==4) . length . snd) b
       border = corners ++ edges
@@ -387,14 +387,12 @@ instance PositionalGame Yavalath (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ fmap nextPlayer) $
-          criteria
-            -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
-            -- It's important we use `but` here because otherwise we could have conflicting
-            -- outcomes from having both 3 in a row and 4 in a row at the same time.
-          [ (criteria (player1LosesIf . inARow (==3) <$> directions)
-            `but` criteria (player1WinsIf . inARow (>=4) <$> directions)) . filterValues (== Just Player1)
-          , drawIf $ all isJust . values -- It's a draw if all tiles are owned.
-          ]
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
+        -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
+        -- It's important we use `unless` here because otherwise we could have conflicting
+        -- outcomes from having both 3 in a row and 4 in a row at the same time.
+        criteria (player1LosesIf . inARow (==3) <$> directions) . filterValues (== Just Player1) `unless`
+        criteria (player1WinsIf . inARow (>=4) <$> directions) . filterValues (== Just Player1)
 
       directions = ["vertical", "diagonal1", "diagonal2"]
 
@@ -433,10 +431,10 @@ instance PositionalGame MNKGame (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ fmap nextPlayer) $
-          criteria
-          [ drawIf $ all isJust . values -- It's a draw if all tiles are owned.
-          , criteria $ player1WinsIf . inARow (>=k) <$> directions -- Player1 wins if there are k or more pieces in a row in any direction.
-          ]
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
+        -- Player1 wins if there are k or more pieces in a row in any direction.
+        criteria (player1WinsIf . inARow (>=k) <$> directions)
+          
 
       directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
 
