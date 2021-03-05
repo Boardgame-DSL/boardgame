@@ -40,6 +40,8 @@ We can codify a positional game by the following properties:
 - Winning criteria. Maybe the type of positional game can be used as a help when deciding who the winner is. It is desireable to
   deduce a winner as soon as soon as only one outcome is possible (assuming non-perfect players). E.g. to not let the game continue until
   all elements of X are claimed if it does not change the winner assuming non-perfect players.
+  
+  Ideally a set of general criteria (or small functions) should be figured out that could be reused when specifying a game. Some ideas: neigbouring positions of length n making up a geometric line (for Tic-Tac-Toe, Gomuko, ...), Some property on spanning trees (Gale, Shannon Switching Game, ...), Path existence (Hex), ..., Existence of Hamiltonian cycle, ...
 
 
 ## Classification of some games:
