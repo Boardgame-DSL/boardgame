@@ -26,7 +26,7 @@ There are different winning criteria depending on the type of postitional game:
 
 - **Discrepancy game**: A hybrid between Maker-Breaker and Avoider-Enforcer. `FP`'s ("Balancer") aims to end up with the correct proportion of elements in element of F.
 
-- **[Orientation games](https://www-sciencedirect-com.ezproxy.ub.gu.se/science/article/pii/S0012365X97002240)**: 
+- **[Orientation games](https://www.sciencedirect.com/science/article/pii/S0012365X97002240)**: 
 
 - **Waiter-Client game** (Picker-Chooser):
 
