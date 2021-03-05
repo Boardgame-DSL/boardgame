@@ -1,4 +1,4 @@
-# Sketch for furhter generalization
+# Sketch for further generalization
 
 A positional game consists of:
 
