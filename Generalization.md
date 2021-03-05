@@ -1,4 +1,4 @@
-Sketch for furhter generalization
+# Sketch for furhter generalization
 
 A positional game consists of:
 
@@ -11,15 +11,15 @@ The players take turns, claiming previously unoccupied elements of X until all e
 
 There are different winning criteria depending on the type of postitional game:
 
-- Strong positional game (Maker-Maker): The winner is the first player to fully claim some element in F. If neither
+- **Strong positional** game (Maker-Maker): The winner is the first player to fully claim some element in F. If neither
   player has claimed some element in F when all elements in X are claimed the game is a draw.
 
-- Weak positional game (Maker-Breaker): `FP` ("Maker") wins the game as soon as he fully claims a
+- Weak positional game (**Maker-Breaker**): `FP` ("Maker") wins the game as soon as he fully claims a
   set in F (not necessarily first). If Maker has not won by the time all elemnets of X are claimed, 
   `SP` ("Breaker") wins (i.e. `SP` has claimed at least one element in every winning set). Draws are not possible. Every
   Strong positional game can be reformulated as a Maker-Breaker variant?
 
-- Avoider-Enforcer positional game: This game has the exact opposite (misère) winning criteria of the
+- **Avoider-Enforcer** positional game: This game has the exact opposite (misère) winning criteria of the
   corresponding Maker-Breaker game for the same X and F. I.e. `SP` ("Enforcer") wins if `FP` ("Avoider") fully
   claims an element of F ("losing sets"). Avoider wins if by the time all elements of X are claimed, he has not
   claimed an element of F.
@@ -42,36 +42,34 @@ We can codify a positional game by the following properties:
   all elements of X are claimed.
 
 
-Classifications of some games:
+## Classification of some games:
 
-## Strong
+### Strong Positional
 
-Tic-Tac-Toe
-Arithmetic progression game (The van der Waerden game)
-Connect6
-Gomuko
-mnk-game
-
-
-## Maker-Breaker
-
-Gale
-Hex
-Havannah (but draws are possible?)
-The Shannon Switching Game
+- [Arithmetic progression game](https://en.wikipedia.org/wiki/Arithmetic_progression_game) (The van der Waerden game)
+- [Tic-Tac-Toe](https://en.wikipedia.org/wiki/Tic-tac-toe)
+- [Connect6](https://en.wikipedia.org/wiki/Connect6)
+- [Gomuko](https://en.wikipedia.org/wiki/Gomoku)
+- [m,n,k-game](https://en.wikipedia.org/wiki/M,n,k-game)
 
 
-## Avoider-Enforcer
+### Maker-Breaker
 
-Sim
-Yavalath(?)
+- [Gale](https://en.wikipedia.org/wiki/Shannon_switching_game#Gale)
+- [Hex](https://en.wikipedia.org/wiki/Hex_(board_game))
+- [Havannah](https://en.wikipedia.org/wiki/Havannah) (but draws are possible?)
+- [Shannon Switching Game](https://en.wikipedia.org/wiki/Shannon_switching_game)
 
 
+### Avoider-Enforcer
+
+- [Sim](https://en.wikipedia.org/wiki/Sim_(pencil_game))
+- [Yavalath](https://de.wikipedia.org/wiki/Yavalath)(?)
 
 
-Alternative classification
+## Alternative classification
 
-## Connection games
+### Connection games
 
-Havannah
-Hex
+- [Havannah](https://en.wikipedia.org/wiki/Havannah)
+- [Hex](https://en.wikipedia.org/wiki/Hex_(board_game))
