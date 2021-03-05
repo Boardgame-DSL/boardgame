@@ -29,17 +29,17 @@ We can codify a positional game by the following properties:
 
 - The "Board" (the set X) is represented by a graph
 
-- Elements of X ("positions") are either the set of edges, or the set of vertices in X.
+- Represent the elements of X ("positions") as either the set of edges, or the set of vertices in X.
 
-- The way in which elements are related (interconnected) in X. E.g. Hexagon board, square board, complete graph, ...
+- Define in what way elements in X are related (interconnected). E.g. as a Hexagon board, square board, complete graph, ...
 
-- The size of X. The meaning may depend on how elements are related. E.g. size is the side for a square board, but the number of vertices for a board consisting of a complete graph.
+- Define the "size" of X. The meaning of size may depend on how elements are related. E.g. size can be the side for a square square board, the number of vertices for a complete graph, ...
 
-- Valid next moves (element in X to be claimed) for either player.
+- Valid next moves (element in X to be potentially claimed) for either player.
 
-- Winning criteria. Maybe specify the type of game from above and use this as help when deciding who the winner is. It is desireable to
-  deduce a winner as soon as soon as only one outcome is possible (assuming non-perfect players). E.g. not let the game continue until
-  all elements of X are claimed.
+- Winning criteria. Maybe the type of positional game can be used as a help when deciding who the winner is. It is desireable to
+  deduce a winner as soon as soon as only one outcome is possible (assuming non-perfect players). E.g. to not let the game continue until
+  all elements of X are claimed if it does not change the winner assuming non-perfect players.
 
 
 ## Classification of some games:
