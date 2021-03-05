@@ -24,7 +24,7 @@ There are different winning criteria depending on the type of postitional game:
   claims an element of F ("losing sets"). Avoider wins if by the time all elements of X are claimed, he has not
   claimed an element of F.
 
-- **Discrepancy game**: A hybrid between Maker-Breaker and Avoider-Enforcer. `FP`'s ("Balancer) aims to end up with the correct proportion of elements in element of F.
+- **Discrepancy game**: A hybrid between Maker-Breaker and Avoider-Enforcer. `FP`'s ("Balancer") aims to end up with the correct proportion of elements in element of F.
 
 - **[Orientation games](https://www-sciencedirect-com.ezproxy.ub.gu.se/science/article/pii/S0012365X97002240)**: 
 
