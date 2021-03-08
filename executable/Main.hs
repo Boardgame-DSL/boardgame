@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE CPP #-}
 
 module Main where
 
@@ -32,7 +33,7 @@ import MyLib (
     Player(..)
   , PositionalGame(..)
   , patternMatchingGameOver
-  , player
+  , playIO
   , takeEmptyMakeMove
   , nextPlayer
   , drawIf
@@ -49,6 +50,13 @@ import Control.Applicative ((<|>))
 import Data.Tuple (swap)
 import qualified Data.Array ((!))
 import Data.Foldable (toList)
+
+#ifdef WASM
+import qualified Data.Vector as V ((!), fromList)
+import Data.Aeson
+import Data.Aeson.Types
+import MyLib.Web (webDefaultMain)
+#endif
 
 import Math.Geometry.Grid as Grid ()
 import Math.Geometry.Grid.Hexagonal ()
@@ -95,6 +103,21 @@ instance Show TicTacToe where
       showP (Just Player1) = "\ESC[34mo\ESC[0m"
       showP (Just Player2) = "\ESC[31mx\ESC[0m"
       showP Nothing = " "
+
+#ifdef WASM
+-- Converts the game to a JSON array with three arrays with three integers
+-- each. The integers correspond to
+-- 0 → Nothing,
+-- 1 → Just Player1, and
+-- 2 → Just Player2.
+instance ToJSON TicTacToe where
+  toJSON (TicTacToe b) = Array $ V.fromList $ map row [0..2]
+    where
+      row y = Array $ V.fromList $ map (\x -> toJSONP $ b ! (x, y)) [0..2]
+      toJSONP (Just Player1) = toJSON (1 :: Int)
+      toJSONP (Just Player2) = toJSON (2 :: Int)
+      toJSONP Nothing = toJSON (0 :: Int)
+#endif
 
 instance PositionalGame TicTacToe (Integer, Integer) where
   -- Just looks up the coordinate in the underlying Map
@@ -294,6 +317,11 @@ instance Show Hex where
     ++
     "\n" ++ concat (replicate hexSize " \\_/")
 
+#ifdef WASM
+instance ToJSON Hex where
+  toJSON (Hex _ m) = toJSON m
+#endif
+
 gridShowLine :: Hex -> Int -> [String]
 gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
                           ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, hexSize-1-y) b) [0..(hexSize-1)]) ++ " |"
@@ -456,6 +484,10 @@ emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
 -- * CLI interactions
 -------------------------------------------------------------------------------
 
+#ifdef WASM
+main :: IO ()
+main = webDefaultMain $ emptyHex 5
+#else
 main :: IO ()
 main = do
   putStrLn "1: TicTacToe"
@@ -468,14 +500,16 @@ main = do
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
+  putStr "\ESC[2J"
+  hFlush stdout
   case choice of
-    1 -> player emptyTicTacToe
+    1 -> playIO emptyTicTacToe
     2 -> playAPG
-    3 -> player $ createShannonSwitchingGame 5
-    4 -> player emptyGale
-    5 -> player $ emptyHex 5
-    6 -> player $ emptyHavannah 8
-    7 -> player $ emptyYavalath 2
+    3 -> playIO $ createShannonSwitchingGame 5
+    4 -> playIO emptyGale
+    5 -> playIO $ emptyHex 5
+    6 -> playIO $ emptyHavannah 8
+    7 -> playIO $ emptyYavalath 2
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
@@ -487,5 +521,6 @@ playAPG = do
   hFlush stdout
   k <- read <$> getLine
   case createArithmeticProgressionGame n k of
-    Just a -> player a
+    Just a -> playIO a
     Nothing -> putStrLn "Not valid input (n < k)"
+#endif

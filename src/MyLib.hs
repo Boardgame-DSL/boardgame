@@ -1,10 +1,14 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE CPP #-}
 
 module MyLib (
     Player(..)
   , PositionalGame(..)
   , nextPlayer
-  , player
+  , play
+  , playerToInt
+  , playIO
   , takeEmptyMakeMove
   , patternMatchingGameOver
   , drawIf
@@ -18,12 +22,17 @@ module MyLib (
   , ifNotThen
 ) where
 
+import Data.Functor ((<&>))
 import Data.List (find, intercalate)
 import Data.Maybe (isJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
+#ifdef WASM
+import Data.Aeson (ToJSON(toJSON), Value(Number))
+import Data.Scientific (fromFloatDigits)
+#endif
 
 -- | Represents one of the two players.
 data Player = Player1 | Player2
@@ -33,6 +42,16 @@ data Player = Player1 | Player2
 nextPlayer :: Player -> Player
 nextPlayer Player1 = Player2
 nextPlayer Player2 = Player1
+
+-- | Turns a 'Player' into an int. 1 or 2 for the player respectively.
+playerToInt :: Player -> Int
+playerToInt Player1 = 1
+playerToInt Player2 = 2
+
+#ifdef WASM
+instance ToJSON Player where
+  toJSON = Number . fromFloatDigits . fromIntegral . playerToInt
+#endif
 
 -- | A type class for positional games where `a` is the game itself and `c` is
 --   its accompanying "coordinate" type.
@@ -81,29 +100,48 @@ patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomoge
     reduceHomogeneousList []     = Nothing
     reduceHomogeneousList (x:xs) = if all (== x) xs then x else Nothing
 
+-- | The skeleton code for "playing" any 'PositionalGame'. When given a set of
+--   function for communicating the state of the game and moves, a starting
+--   state can be applied to play the game.
+play :: (Monad m, PositionalGame a c) =>
+  (a -> m ())
+  -- ^ Function for outputting the state of the game.
+  -> (Player -> m ())
+  -- ^ Function for communicating which 'Player's turn it is.
+  -> m c
+  -- ^ Function for getting a move from a player.
+  -> m ()
+  -- ^ Function for communicating an invalid move.
+  -> (Maybe Player -> m ())
+  -- ^ Function for outputting the end result of the game.
+  -> a
+  -> m ()
+play putState putTurn getMove putInvalidMove putGameOver startingState = putState startingState >> putTurn Player1 >> play' startingState Player1
+  where
+    play' s p = getMove <&> makeMove s p >>= \case
+      Just s' -> putState s' >> case gameOver s' of
+        Just v  -> putGameOver v
+        Nothing -> (\p' -> putTurn p' >> play' s' p') $ nextPlayer p
+      Nothing -> putInvalidMove >> play' s p
+
 -- | Plays a 'PositionalGame' in the console by taking alternating input from
 --   the players. Requires that the game is an instance of 'Show' and that its
 --   coordinates are instances of 'Read'.
-player :: (Show a, Read c, PositionalGame a c) => a -> IO ()
-player startState = start startState Player1
+playIO :: (Show a, Read c, PositionalGame a c) => a -> IO ()
+playIO = play putState putTurn getMove putInvalidMove putGameOver
   where
-    -- | Prints out the starting state, then plays the game.
-    start t p = putStr "\ESC[2J" >> printGame t >> play t p
-    -- | Prints out the game in the top left corner of the terminal
-    printGame t = putStr "\ESC[s\ESC[0;0H" >> print t >> putStr "\ESC[u"
-    -- | Asks for input, prints out the new state or repeats if the input/move
-    --   is invalid. Repeats until the game is over.
-    play t p = do
-      putStr $ "Move for " ++ show p ++ ": "
-      hFlush stdout
-      c <- readMaybe <$> getLine
-      case c >>= makeMove t p of
-        Just t -> printGame t >> case gameOver t of
-            Just p -> case p of
-              Just p -> putStrLn $ show p ++ " won!"
-              Nothing -> putStrLn "It's a draw!"
-            Nothing -> play t (nextPlayer p)
-        Nothing -> putStrLn "Invalid move, try again" >> play t p
+    putState s = putStr "\ESC[s\ESC[0;0H" >> print s >> putStr "\ESC[u" >> hFlush stdout
+    putTurn p = putStr ("Move for " ++ (case p of
+      Player1 -> "player 1"
+      Player2 -> "player 2") ++ ": ") >> hFlush stdout
+    getMove = getLine <&> readMaybe >>= \case
+      Just c  -> return c
+      Nothing -> putStr "Invalid input, try again: " >> hFlush stdout >> getMove
+    putInvalidMove = putStr "Invalid move, try again: " >> hFlush stdout
+    putGameOver = \case
+      Just Player1 -> putStrLn "Player 1 won!" >> hFlush stdout
+      Just Player2 -> putStrLn "Player 2 won!" >> hFlush stdout
+      Nothing      -> putStrLn "It's a draw!" >> hFlush stdout
 
 
 data BiasedPositionalGame a c = BiasedPositionalGame Int Int a
