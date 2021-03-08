@@ -170,28 +170,39 @@ instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPos
 
 
 
+-- | If the predicate holds, a winning state for player 1 is returned. If
+--   not, a "game running" state is returned.
 player1WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
 player1WinsIf pred x = if pred x
   then Just $ Just Player1
   else Nothing
 
+-- | A synonym for 'player1WinsIf'. When player 2 loses, player 1 wins.
 player2LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
 player2LosesIf = player1WinsIf
 
+-- | If the predicate holds, a winning state for player 2 is returned. If
+--   not, a "game running" state is returned.
 player2WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
 player2WinsIf pred x = if pred x
   then Just $ Just Player2
   else Nothing
 
+-- | A synonym for 'player2WinsIf'. When player 1 loses, player 2 wins.
 player1LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
 player1LosesIf = player2WinsIf
 
+-- | If the predicate holds, a draw state is returned. If not, a "game running"
+--   state is returned.
 drawIf :: (a -> Bool) -> (a -> Maybe (Maybe Player))
 drawIf pred x = if pred x
   then Just Nothing
   else Nothing
 
--- combine two criteria.
+-- | Combines two criteria into one. If one criterion returns a game over
+--   state and the other a game running state, the game over state is returned.
+--   If the criteria returns different game over states, different winners or
+--   one draw and one winner, an error is raised.
 (+|+) :: (a -> Maybe (Maybe Player))
       -> (a -> Maybe (Maybe Player))
       -> (a -> Maybe (Maybe Player))
@@ -199,23 +210,27 @@ crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
   (Just x, Just y) | x /= y -> error "conflicting result"
   (x, y) -> x <|> y
 
+-- | Combines two criteria into one where if the first criterion does not
+--   return a game over state, the result of the second criterion is used.
 ifNotThen :: (a -> Maybe (Maybe Player))
     -> (a -> Maybe (Maybe Player))
     -> (a -> Maybe (Maybe Player))
 ifNotThen crit1 crit2 x = crit1 x <|> crit2 x
 
 infixl 8 `unless`
--- override the first criterion with the second criterion.
+-- | Combines two criteria into one where the first criterions result is
+--   returned, unless the second criterion returns a game over state.
 unless :: (a -> Maybe (Maybe Player))
        -> (a -> Maybe (Maybe Player))
        -> (a -> Maybe (Maybe Player))
 unless = flip ifNotThen
 
--- combine several criteria.
+-- | Combines several criteria into one. If two or more of the criteria returns
+--   different game over states, an error is raised.
 criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)
 criteria = foldl1 (+|+)
 
--- create a symmetric game from a game defined for only one player.
+-- | Create a symmetric game from a game defined for only one player.
 symmetric :: (a -> a) -> (a -> Maybe (Maybe Player)) -> a -> Maybe (Maybe Player)
 symmetric flipState criterion = criterion +|+ (fmap (fmap nextPlayer) . criterion . flipState)
 
