@@ -60,14 +60,22 @@ ahc-cabal new-build exe:boardgame --flags="wasm"
 ```
 
 But building targeting WASM doesn't actually get us anything useful. To
-transform the output to `.wasm` and `.js` you can use `ahc-dist`. First, step
-into the directory where you want the output, then run the following command:
+transform the output to `.wasm` and `.js` you can use `ahc-dist`. Run the
+following command:
 ```sh
-ahc-dist --input-exe path/to/boardgame --browser --bundle --output-directory .
+ahc-dist --browser --bundle \
+	--input-exe path/to/boardgame \
+	--output-directory /absolute/path/to/existing/out-directory
 ```
 The `--input-exe` is the path to the output of building the project, it's
 probably `dist-newstyle/build/x86_64-linux/ghc-8.8.4/boardgame-0.1.0.0/x/boardgame/opt/build/boardgame/boardgame`
 from the root of the project.
 
 In your output directory you'll now find `boardgame.wasm` and `boardgame.js`,
-and an example HTML file `boardgame.html` showing how to use them.
+and an example HTML file `boardgame.html` showing how to use them. Open
+`boardgame.html` in a web server (can't load WASM from a local file), open the
+console in your web browser, and play around with the `window.boardgame` object.
+
+If you wish to have a UI to play around with, you can mode the `boardgame.wasm`
+and `boardgame.js` files over to the example of the [boardgame.js](https://github.com/Boardgame-DSL/boardgame.js)
+repo.
