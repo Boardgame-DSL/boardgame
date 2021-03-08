@@ -8,6 +8,7 @@ module ColoredGraph (
   , mapValues
   , mapEdges
   , filterValues
+  , filterEdges
   , filterG
   , components
   , anyConnections
@@ -25,7 +26,10 @@ import Data.Tree ()
 import Data.Bifunctor ( bimap, Bifunctor (first, second) )
 
 
--- a Graph with colored vertices and edges.
+-- | A Graph with colored vertices and edges. The key of the map is 'i', the
+--   "coordinates". The value of the map is a tuple of vertices color 'a', and
+--   a list of edges. The edges are tuples of edge color 'b' and
+--   "target coordinate" 'i'.
 type ColoredGraph i a b = Map i (a, [(b, i)])
 
 type Coordinate = (Int, Int)
@@ -77,7 +81,13 @@ hexHexGraphRing base = concat [oneSide k | k <- [0..5]]
 distance :: Coordinate -> Coordinate -> Int
 distance (x, y) (i, j) = (abs(x - i) + abs(x + y - i - j) + abs(y - j)) `div` 2
 
-hexHexGraph :: Int -> ColoredGraph Coordinate (Maybe a) Coordinate
+-- | Creates a hexagon shaped graph of hexagon vertices (each vertex has six
+--   outgoing edges) with the given radius.
+--
+--   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' is at
+--   the center. The color of edges will also be a '(Int, Int)' tuple that
+--   shows the "direction" of the edge.
+hexHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
 hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, filter ((< radius) . distance (0, 0) . snd) $ (\i -> (hexDirections !! i, hexNeighbors z !! i )) <$> [0..5]))) <$> nodes)
   where
     nodes :: [Coordinate]
@@ -87,12 +97,24 @@ hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, filter ((< radius) . di
 
 
 
-paraHexGraph :: Int -> ColoredGraph Coordinate (Maybe a) Coordinate
+-- | Creates a parallelogram shaped graph of hexagon vertices (each vertex has
+--   six outgoing edges) with the given side length.
+--
+--   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' is at
+--   the center. The color of edges will also be a '(Int, Int)' tuple that
+--   shows the "direction" of the edge.
+paraHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
 paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0) . snd) $ (\i -> (hexDirections !! i, hexNeighbors z !! i )) <$> [0..5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..n-1], j <- [0..n-1]]
 
+-- | Creates a rectangular shaped graph of octagon vertices (each vertex has
+--   eight outgoing edges) with the given width and height.
+--
+--   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' the top
+--   left vertex. The color of edges will also be a '(Int, Int)' tuple that
+--   shows the "direction" of the edge.
 rectOctGraph :: Int -> Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
 rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . snd) $ (\i -> (octoDirections !! i, octoNeighbors z !! i )) <$> [0..7]))) <$> nodes)
   where
@@ -110,21 +132,27 @@ firstJust f = listToMaybe . mapMaybe f
 mapMaybeG :: Ord i => ((a, [(b, i)]) -> Maybe c) -> ColoredGraph i a b -> ColoredGraph i c b
 mapMaybeG f g = Map.mapMaybe (\(a, xs) -> (, filter (\(_, k) -> isJust $ f $ fromJust $ Map.lookup k g) xs) <$> f (a, xs)) g
 
+-- | Filters out any vertices whose value, and their outgoing edges with
+--   values, is not accepted by the predicate.
 filterG :: Ord i => ((a, [(b, i)]) -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
 filterG pred = mapMaybeG (\(z, w) -> if pred (z, w) then Just z else Nothing)
 
+-- | Filters out any vertices whose value is not accepted by the predicate.
 filterValues :: Ord i => (a -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
 filterValues pred = filterG $ pred . fst
 
+-- | Maps the values of vertices with the given function.
 mapValues :: Ord i => (a -> c) -> ColoredGraph i a b -> ColoredGraph i c b
 mapValues = fmap . first
 
+-- | Maps the values of edges with the given function.
 mapEdges :: Ord i => (b -> c) -> ColoredGraph i a b -> ColoredGraph i a c
 mapEdges = fmap . second . fmap . first
 
 nodesPred :: (a -> [(b, i)] -> Bool) -> ColoredGraph i a b -> [i]
 nodesPred pred g = fst <$> filter (uncurry pred . snd) (Map.toList g)
 
+-- | Filters out any edges whose value is not accepted by the predicate.
 filterEdges :: (b -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
 filterEdges pred = fmap $ second $ filter $ pred . fst
 
@@ -141,7 +169,7 @@ path' s g i j
     s' = Set.insert i s
 
 
--- a list of all nodes grouped by connected components.
+-- | A list of all vertices grouped by connected components.
 components :: (Eq i, Ord i) => ColoredGraph i a b -> [[i]]
 components = components' []
   where
@@ -165,16 +193,19 @@ component  g = fst . component' Set.empty  g
           | k `Set.member` state = (ks, state)
           | otherwise = let (x, y) = component' state  g k in (ks ++ x, y)
 
+-- | Returns a list of vertex values from the given graph.
 values :: ColoredGraph i a b -> [a]
 values = fmap fst . Map.elems
 
--- For every component of G, count how many groups of nodes they overlap with and check if the predicate holds on the count.
--- If it matches on any component then return true. Otherwise return false.
+-- | For every component of G, count how many groups of nodes they overlap with
+--   and check if the predicate holds on the count. If it matches on any
+--   component then return true. Otherwise return false.
 anyConnections :: Ord i => (Int -> Bool) -> [[i]] -> ColoredGraph i a b -> Bool
 anyConnections pred groups g = any (\z -> pred $ length $ filter (not . Prelude.null . intersect z) groups) $ components g
 
 
--- is there a component along edges `dir` that has a length matching `pred`.
+-- | Is there a component along edges with value `dir` that has a length
+--   accepted by `pred`.
 inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
 inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
