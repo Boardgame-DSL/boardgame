@@ -34,6 +34,7 @@ type ColoredGraph i a b = Map i (a, [(b, i)])
 
 type Coordinate = (Int, Int)
 
+-- The six directions of neighbours on a hexagonal grid.
 hexDirections :: [Coordinate]
 hexDirections =
   [ (1, 0)
@@ -44,9 +45,12 @@ hexDirections =
   , (0, 1)
   ]
 
+-- Returns the six neighboring coordinates of the given coordinate on a
+-- hexagonal grid.
 hexNeighbors :: Coordinate -> [Coordinate]
 hexNeighbors (i, j) = bimap (+ i) (+ j) <$> hexDirections
 
+-- The eight directions of neighbours on a square grid.
 octoDirections :: [Coordinate]
 octoDirections =
   [ (1, 0)
@@ -59,15 +63,19 @@ octoDirections =
   , (1, 1)
   ]
 
+-- Returns the eight neighboring coordinates of the given coordinate on a
+-- square grid.
 octoNeighbors :: Coordinate -> [Coordinate]
 octoNeighbors (i, j) = bimap (+ i) (+ j) <$> octoDirections
 
 
 
 
+-- Maps over the individual values of a tuple.
 mapBoth :: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (x, y) = (f x, f y)
 
+-- Combines two tuples using the given function.
 binaryOp :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
 binaryOp op (x, y) (z, w) = (op x z, op y w)
 
@@ -78,6 +86,7 @@ hexHexGraphRing base = concat [oneSide k | k <- [0..5]]
     oneSide :: Int -> [Coordinate]
     oneSide i = [binaryOp (\z w -> base*z + k*w) (hexDirections !! i) (hexDirections !! ((i+2) `mod` 6)) | k <- [1..base]]
 
+-- Returns the distance between two hexagonal coordinates.
 distance :: Coordinate -> Coordinate -> Int
 distance (x, y) (i, j) = (abs(x - i) + abs(x + y - i - j) + abs(y - j)) `div` 2
 
@@ -126,9 +135,12 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < m
 
 
 
+-- Returns the first value that is accepted by the predicate, or 'Nothing'.
 firstJust :: (a -> Maybe b) -> [a] -> Maybe b
 firstJust f = listToMaybe . mapMaybe f
 
+-- Maps the vertices, and their outgoing edges with values, and collects the
+-- 'Just' results.
 mapMaybeG :: Ord i => ((a, [(b, i)]) -> Maybe c) -> ColoredGraph i a b -> ColoredGraph i c b
 mapMaybeG f g = Map.mapMaybe (\(a, xs) -> (, filter (\(_, k) -> isJust $ f $ fromJust $ Map.lookup k g) xs) <$> f (a, xs)) g
 
@@ -149,6 +161,8 @@ mapValues = fmap . first
 mapEdges :: Ord i => (b -> c) -> ColoredGraph i a b -> ColoredGraph i a c
 mapEdges = fmap . second . fmap . first
 
+-- Returns a list of "coordinates" for vertices whose value, and their outgoing
+-- edges with values, are accepted by the predicate.
 nodesPred :: (a -> [(b, i)] -> Bool) -> ColoredGraph i a b -> [i]
 nodesPred pred g = fst <$> filter (uncurry pred . snd) (Map.toList g)
 
@@ -156,10 +170,12 @@ nodesPred pred g = fst <$> filter (uncurry pred . snd) (Map.toList g)
 filterEdges :: (b -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
 filterEdges pred = fmap $ second $ filter $ pred . fst
 
--- Give a path from i to j, including what edgecolor/direction to take.
+-- Returns a path from i to j, including what edge value to take.
 path :: Ord i => ColoredGraph i a b -> i -> i -> Maybe [(b, i)]
 path = path' Set.empty
 
+-- Returns a path from i to j, including what edge value to take. With a set of
+-- already visited "coordinates".
 path' :: Ord i => Set i -> ColoredGraph i a b -> i -> i -> Maybe [(b, i)]
 path' s g i j
   | i == j = Just []
