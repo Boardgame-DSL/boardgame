@@ -58,7 +58,10 @@ instance ToJSON Player where
 class PositionalGame a c | a -> c where
   -- | Takes the "current" state, a player, and a coordinate. Returns the new
   --   state if the move is valid.
+  --
+  --   The default implementation is 'takeEmptyMakeMove'.
   makeMove :: a -> Player -> c -> Maybe a
+  makeMove = takeEmptyMakeMove
   -- | Takes the "current" state and checks if the game is over, in which case
   --   the victorious player is returned or nothing in case of a draw.
   --

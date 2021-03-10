@@ -128,8 +128,6 @@ instance PositionalGame TicTacToe (Integer, Integer) where
   positions (TicTacToe b) = elems b
   -- If the underlying Map has the given coordinate, update it with the given player
   setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c (Just p) b else Nothing
-  -- Just uses the "standard" implementation
-  makeMove = takeEmptyMakeMove
   -- "Creates" a `gameOver` function by supplying all the winning "patterns"
   gameOver = patternMatchingGameOver [
       [(0, 0), (0, 1), (0, 2)]
@@ -168,7 +166,6 @@ instance PositionalGame ArithmeticProgressionGame Int where
   setPosition (ArithmeticProgressionGame k l) i p = if i <= length l
     then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ Just p : drop i l)
     else Nothing
-  makeMove = takeEmptyMakeMove
   gameOver a@(ArithmeticProgressionGame k l) = let n = length l
     in patternMatchingGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a
 
@@ -212,7 +209,6 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
   setPosition (ShannonSwitchingGame (n, l)) c p = case findIndex ((== c) . fst) l of
     Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, Just p) : drop (i + 1) l)
     Nothing -> Nothing
-  makeMove = takeEmptyMakeMove
   gameOver (ShannonSwitchingGame (n, l))
     | path g 0 (n * n - 1) = Just (Just Player1)
     | path g (n - 1) (n * n - n) = Just (Just Player2)
@@ -280,7 +276,6 @@ instance PositionalGame Gale (Integer, Integer) where
   positions (Gale b) = elems b
   setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c (Just p) b else Nothing
     where c = (x `div` 2, y)
-  makeMove = takeEmptyMakeMove
   gameOver (Gale b)
     | all isJust (elems b) = Just Nothing
     | path player1Graph (-1) (-2) = Just $ Just Player1
