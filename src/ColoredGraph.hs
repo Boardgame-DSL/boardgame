@@ -5,23 +5,29 @@ module ColoredGraph (
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
+  , triHexGraph
+  , kGraph
   , mapValues
   , mapEdges
   , filterValues
+  , filterEdges
   , filterG
   , components
   , anyConnections
   , inARow
   , values
+  , subgraph
+  , winningSetPaths
+  , winningSetPaths'
 ) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.List ( find, intersect )
+import Data.List ( find, intersect, (\\) )
 import Data.Maybe ( fromJust, isJust, listToMaybe, mapMaybe )
-import Data.Tree ()
+import Data.Tree (Tree(..), foldTree)
 import Data.Bifunctor ( bimap, Bifunctor (first, second) )
 
 
@@ -99,6 +105,16 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < m
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..m-1], j <- [0..n-1]]
 
+triHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
+triHexGraph n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i+j>=n) . snd) $ (\i -> (hexDirections !! i, hexNeighbors z !! i )) <$> [0..7]))) <$> nodes)
+  where
+    nodes :: [Coordinate]
+    nodes = [(i, j) | i <- [0..n-1], j <- [0..n-1], i+j>=n]
+
+kGraph :: Int -> ColoredGraph Int () ()
+kGraph n = Map.fromList [ (i, ((), [((), j) | j <- [0..n-1], i /= j]) )| i <- [0..n-1]]
+
+
 
 
 
@@ -107,14 +123,14 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < m
 firstJust :: (a -> Maybe b) -> [a] -> Maybe b
 firstJust f = listToMaybe . mapMaybe f
 
-mapMaybeG :: Ord i => ((a, [(b, i)]) -> Maybe c) -> ColoredGraph i a b -> ColoredGraph i c b
-mapMaybeG f g = Map.mapMaybe (\(a, xs) -> (, filter (\(_, k) -> isJust $ f $ fromJust $ Map.lookup k g) xs) <$> f (a, xs)) g
+mapMaybeG :: Ord i => (i -> (a, [(b, i)]) -> Maybe c) -> ColoredGraph i a b -> ColoredGraph i c b
+mapMaybeG f g = Map.mapMaybeWithKey (\j (a, xs) -> (, filter (\(_, k) -> isJust $ f k $ fromJust $ Map.lookup k g) xs) <$> f j (a, xs)) g
 
-filterG :: Ord i => ((a, [(b, i)]) -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
-filterG pred = mapMaybeG (\(z, w) -> if pred (z, w) then Just z else Nothing)
+filterG :: Ord i => (i -> (a, [(b, i)]) -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
+filterG pred = mapMaybeG (\k (z, w) -> if pred k (z, w) then Just z else Nothing)
 
 filterValues :: Ord i => (a -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
-filterValues pred = filterG $ pred . fst
+filterValues pred = filterG $ const $ pred . fst
 
 mapValues :: Ord i => (a -> c) -> ColoredGraph i a b -> ColoredGraph i c b
 mapValues = fmap . first
@@ -179,27 +195,20 @@ inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
 inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
 
+subgraph :: ColoredGraph i a b -> ColoredGraph i c d -> Bool
+subgraph = undefined
 
+winningSetPaths :: Ord i => ColoredGraph i a b -> [i] -> [i] -> [[i]]
+winningSetPaths g is js = concat [foldTree (\(isLeaf, z) xs -> if isLeaf then [[z]] else concatMap (fmap (z:)) xs) $ winningSetPaths' g start i goal | i <- is]
+  where
+    allTrue = True <$ g
+    start = foldr (`Map.insert` False) allTrue is
 
+    allFalse = False <$ g
+    goal = foldr (`Map.insert` True) allFalse js
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+winningSetPaths' :: Ord i => ColoredGraph i a b -> Map i Bool -> i -> Map i Bool -> Tree (Bool, i)
+winningSetPaths' g allowed i goal = Node (False, i) $ (\k -> if fromJust $ Map.lookup k goal then Node (True, k) [] else winningSetPaths' g allowed' k goal) <$> neighbourIndices
+  where
+    neighbourIndices = filter (fromJust . flip Map.lookup allowed) $ fmap snd (snd $ fromJust $ Map.lookup i g)
+    allowed' = foldr (`Map.insert` False) allowed neighbourIndices
