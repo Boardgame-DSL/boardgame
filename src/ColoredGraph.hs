@@ -15,6 +15,7 @@ module ColoredGraph (
   , inARow
   , values
   , coloredGraphSetPosition
+  , coloredGraphGetPosition
 ) where
 
 import Data.Map (Map)
@@ -225,6 +226,11 @@ anyConnections pred groups g = any (\z -> pred $ length $ filter (not . Prelude.
 --   accepted by `pred`.
 inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
 inARow pred dir = any (pred . length) . components . filterEdges (==dir)
+
+-- | A standard implementation of 'MyLib.getPosition' for games
+--   with an underlying 'ColoredGraph'.
+coloredGraphGetPosition :: Ord i => ColoredGraph i (Maybe a) b -> i -> Maybe (Maybe a)
+coloredGraphGetPosition c i = fst <$> Map.lookup i c
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph'.

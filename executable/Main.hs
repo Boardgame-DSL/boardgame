@@ -73,6 +73,7 @@ import ColoredGraph (
   , mapEdges
   , rectOctGraph
   , coloredGraphSetPosition
+  , coloredGraphGetPosition
   , inARow)
 -------------------------------------------------------------------------------
 -- * TicTacToe
@@ -334,7 +335,7 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   tileTop = concat $ replicate hexSize " / \\"
 
 instance PositionalGame Hex (Int, Int) where
-  getPosition (Hex n b) c = fst <$> lookup c b
+  getPosition (Hex n b) = coloredGraphGetPosition b
   positions (Hex n b) = values b
   setPosition (Hex n b) = coloredGraphSetPosition (Hex n) b
   makeMove = takeEmptyMakeMove
@@ -362,7 +363,7 @@ instance Show Havannah where
   show (Havannah b) = show b
 
 instance PositionalGame Havannah (Int, Int) where
-  getPosition (Havannah b) c = fst <$> lookup c b
+  getPosition (Havannah b) = coloredGraphGetPosition b
   positions (Havannah b) = values b
   setPosition (Havannah b) = coloredGraphSetPosition Havannah b
   makeMove = takeEmptyMakeMove
@@ -399,7 +400,7 @@ instance Show Yavalath where
   show (Yavalath b) = show b
 
 instance PositionalGame Yavalath (Int, Int) where
-  getPosition (Yavalath b) c = fst <$> lookup c b
+  getPosition (Yavalath b) = coloredGraphGetPosition b
   positions (Yavalath b) = values b
   setPosition (Yavalath b) = coloredGraphSetPosition Yavalath b
   makeMove = takeEmptyMakeMove
@@ -441,7 +442,7 @@ instance Show MNKGame where
   show (MNKGame k b) = show b
 
 instance PositionalGame MNKGame (Int, Int) where
-  getPosition (MNKGame k b) c = fst <$> lookup c b
+  getPosition (MNKGame k b) = coloredGraphGetPosition b
   positions (MNKGame k b) = values b
   setPosition (MNKGame k b) = coloredGraphSetPosition (MNKGame k) b
   makeMove = takeEmptyMakeMove
