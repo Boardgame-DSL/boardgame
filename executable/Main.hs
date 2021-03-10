@@ -72,6 +72,7 @@ import ColoredGraph (
   , hexHexGraph
   , mapEdges
   , rectOctGraph
+  , coloredGraphSetPosition
   , inARow)
 -------------------------------------------------------------------------------
 -- * TicTacToe
@@ -335,9 +336,7 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
 instance PositionalGame Hex (Int, Int) where
   getPosition (Hex n b) c = fst <$> lookup c b
   positions (Hex n b) = values b
-  setPosition (Hex n b) c p = if member c b
-    then Just $ Hex n $ adjust (\(_, xs) -> (Just p, xs)) c b
-    else Nothing
+  setPosition (Hex n b) = coloredGraphSetPosition (Hex n) b
   makeMove = takeEmptyMakeMove
   gameOver (Hex n b) = criterion b
     where
@@ -365,9 +364,7 @@ instance Show Havannah where
 instance PositionalGame Havannah (Int, Int) where
   getPosition (Havannah b) c = fst <$> lookup c b
   positions (Havannah b) = values b
-  setPosition (Havannah b) c p = if member c b
-    then Just $ Havannah $ adjust (\(_, xs) -> (Just p, xs)) c b
-    else Nothing
+  setPosition (Havannah b) = coloredGraphSetPosition Havannah b
   makeMove = takeEmptyMakeMove
 
   gameOver (Havannah b) = criterion b
@@ -404,9 +401,7 @@ instance Show Yavalath where
 instance PositionalGame Yavalath (Int, Int) where
   getPosition (Yavalath b) c = fst <$> lookup c b
   positions (Yavalath b) = values b
-  setPosition (Yavalath b) c p = if member c b
-    then Just $ Yavalath $ adjust (\(_, xs) -> (Just p, xs)) c b
-    else Nothing
+  setPosition (Yavalath b) = coloredGraphSetPosition Yavalath b
   makeMove = takeEmptyMakeMove
 
   gameOver (Yavalath b) = criterion b
@@ -448,9 +443,7 @@ instance Show MNKGame where
 instance PositionalGame MNKGame (Int, Int) where
   getPosition (MNKGame k b) c = fst <$> lookup c b
   positions (MNKGame k b) = values b
-  setPosition (MNKGame k b) c p = if member c b
-    then Just $ MNKGame k $ adjust (\(_, xs) -> (Just p, xs)) c b
-    else Nothing
+  setPosition (MNKGame k b) = coloredGraphSetPosition (MNKGame k) b
   makeMove = takeEmptyMakeMove
 
   gameOver (MNKGame k b) = criterion b
