@@ -1,5 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module ColoredGraph (
     ColoredGraph
@@ -241,10 +242,13 @@ coloredGraphSetPosition constructor c i p = if Map.member i c
     then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
     else Nothing
 
-class ColoredGraphPositionalGame g i a b | g -> i, g -> a, g -> b where
+class ColoredGraphPositionalGame i a b g | g -> i, g -> a, g -> b where
   toColoredGraph :: g -> ColoredGraph i (Maybe a) b
   fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
 
+instance ColoredGraphPositionalGame i a b (ColoredGraph i (Maybe a) b) where
+  toColoredGraph c = c
+  fromColoredGraph _ = id
 
 
 

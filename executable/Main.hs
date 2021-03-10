@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Main where
 
@@ -330,7 +331,7 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   rowOffset = replicate (2*(hexSize-y-1)) ' '
   tileTop = concat $ replicate hexSize " / \\"
 
-instance ColoredGraphPositionalGame Hex (Int, Int) Player (Int, Int) where
+instance ColoredGraphPositionalGame (Int, Int) Player (Int, Int) Hex where
   toColoredGraph (Hex n b) = b
   fromColoredGraph (Hex n _) = Hex n
 
@@ -354,13 +355,10 @@ instance PositionalGame Hex (Int, Int) where
 -------------------------------------------------------------------------------
 
 newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
+  deriving (ColoredGraphPositionalGame (Int, Int) Player ())
 
 instance Show Havannah where
   show (Havannah b) = show b
-
-instance ColoredGraphPositionalGame Havannah (Int, Int) Player () where
-  toColoredGraph (Havannah b) = b
-  fromColoredGraph _ = Havannah
 
 instance PositionalGame Havannah (Int, Int) where
   gameOver (Havannah b) = criterion b
@@ -390,13 +388,10 @@ emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
 -------------------------------------------------------------------------------
 
 newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
+  deriving (ColoredGraphPositionalGame (Int, Int) Player String)
 
 instance Show Yavalath where
   show (Yavalath b) = show b
-
-instance ColoredGraphPositionalGame Yavalath (Int, Int) Player String where
-  toColoredGraph (Yavalath b) = b
-  fromColoredGraph _ = Yavalath
 
 instance PositionalGame Yavalath (Int, Int) where
   gameOver (Yavalath b) = criterion b
@@ -435,7 +430,7 @@ data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
 instance Show MNKGame where
   show (MNKGame k b) = show b
 
-instance ColoredGraphPositionalGame MNKGame (Int, Int) Player String where
+instance ColoredGraphPositionalGame (Int, Int) Player String MNKGame where
   toColoredGraph (MNKGame n b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
 

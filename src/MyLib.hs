@@ -79,7 +79,7 @@ class PositionalGame a c | a -> c where
   gameOver :: a -> Maybe (Maybe Player)
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Maybe Player]
-  default positions :: (ColoredGraphPositionalGame a c Player e) => a -> [Maybe Player]
+  default positions :: (ColoredGraphPositionalGame c Player e a) => a -> [Maybe Player]
   positions = values . toColoredGraph
   -- | Returns which player (or nothing) has taken the position at the given
   --   coordinate, or 'Nothing' if the given coordinate is invalid.
@@ -88,12 +88,12 @@ class PositionalGame a c | a -> c where
   -- > Just (Just p) -- Player p owns this position
   -- > Just Nothing  -- This position is empty
   getPosition :: a -> c -> Maybe (Maybe Player)
-  default getPosition :: (ColoredGraphPositionalGame a c Player e, Ord c) => a -> c -> Maybe (Maybe Player)
+  default getPosition :: (ColoredGraphPositionalGame c Player e a, Ord c) => a -> c -> Maybe (Maybe Player)
   getPosition = coloredGraphGetPosition . toColoredGraph
   -- | Takes the position at the given coordinate for the given player and
   --   returns the new state, or 'Nothing' if the given coordinate is invalid.
   setPosition :: a -> c -> Player -> Maybe a
-  default setPosition :: (ColoredGraphPositionalGame a c Player e, Ord c) => a -> c -> Player -> Maybe a
+  default setPosition :: (ColoredGraphPositionalGame c Player e a, Ord c) => a -> c -> Player -> Maybe a
   setPosition g = coloredGraphSetPosition (fromColoredGraph g) $ toColoredGraph g
 
 -- | A standard implementation of 'makeMove' for a 'PositionalGame'.
