@@ -63,7 +63,7 @@ import Math.Geometry.Grid as Grid ()
 import Math.Geometry.Grid.Hexagonal ()
 import ColoredGraph (
     ColoredGraph
-  , ColoredGraphPositionalGame(..)
+  , ColoredGraphVerticesPositionalGame(..)
   , paraHexGraph
   , values
   , anyConnections
@@ -74,8 +74,6 @@ import ColoredGraph (
   , hexHexGraph
   , mapEdges
   , rectOctGraph
-  , coloredGraphSetPosition
-  , coloredGraphGetPosition
   , inARow)
 -------------------------------------------------------------------------------
 -- * TicTacToe
@@ -331,7 +329,7 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   rowOffset = replicate (2*(hexSize-y-1)) ' '
   tileTop = concat $ replicate hexSize " / \\"
 
-instance ColoredGraphPositionalGame (Int, Int) Player (Int, Int) Hex where
+instance ColoredGraphVerticesPositionalGame (Int, Int) Player (Int, Int) Hex where
   toColoredGraph (Hex n b) = b
   fromColoredGraph (Hex n _) = Hex n
 
@@ -355,7 +353,7 @@ instance PositionalGame Hex (Int, Int) where
 -------------------------------------------------------------------------------
 
 newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
-  deriving (ColoredGraphPositionalGame (Int, Int) Player ())
+  deriving (ColoredGraphVerticesPositionalGame (Int, Int) Player ())
 
 instance Show Havannah where
   show (Havannah b) = show b
@@ -388,7 +386,7 @@ emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
 -------------------------------------------------------------------------------
 
 newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
-  deriving (ColoredGraphPositionalGame (Int, Int) Player String)
+  deriving (ColoredGraphVerticesPositionalGame (Int, Int) Player String)
 
 instance Show Yavalath where
   show (Yavalath b) = show b
@@ -430,7 +428,7 @@ data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
 instance Show MNKGame where
   show (MNKGame k b) = show b
 
-instance ColoredGraphPositionalGame (Int, Int) Player String MNKGame where
+instance ColoredGraphVerticesPositionalGame (Int, Int) Player String MNKGame where
   toColoredGraph (MNKGame n b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
 

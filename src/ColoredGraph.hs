@@ -4,7 +4,7 @@
 
 module ColoredGraph (
     ColoredGraph
-  , ColoredGraphPositionalGame(..)
+  , ColoredGraphVerticesPositionalGame(..)
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -17,8 +17,8 @@ module ColoredGraph (
   , anyConnections
   , inARow
   , values
-  , coloredGraphSetPosition
-  , coloredGraphGetPosition
+  , coloredGraphSetVertexPosition
+  , coloredGraphGetVertexPosition
 ) where
 
 import Data.Map (Map)
@@ -231,27 +231,28 @@ inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
 inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
 -- | A standard implementation of 'MyLib.getPosition' for games
---   with an underlying 'ColoredGraph'.
-coloredGraphGetPosition :: Ord i => ColoredGraph i (Maybe a) b -> i -> Maybe (Maybe a)
-coloredGraphGetPosition c i = fst <$> Map.lookup i c
+--   with an underlying 'ColoredGraph' played on the vertices.
+coloredGraphGetVertexPosition :: Ord i => ColoredGraph i (Maybe a) b -> i -> Maybe (Maybe a)
+coloredGraphGetVertexPosition c i = fst <$> Map.lookup i c
 
 -- | A standard implementation of 'MyLib.setPosition' for games
---   with an underlying 'ColoredGraph'.
-coloredGraphSetPosition :: Ord i => (ColoredGraph i (Maybe a) b -> c) -> ColoredGraph i (Maybe a) b -> i -> a -> Maybe c
-coloredGraphSetPosition constructor c i p = if Map.member i c
+--   with an underlying 'ColoredGraph' played on the vertices.
+coloredGraphSetVertexPosition :: Ord i => (ColoredGraph i (Maybe a) b -> c) -> ColoredGraph i (Maybe a) b -> i -> a -> Maybe c
+coloredGraphSetVertexPosition constructor c i p = if Map.member i c
     then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
     else Nothing
 
 -- | A class for games based on 'ColoredGraph's that allows them to use default
---   implementations of functions in 'MyLib.PositionalGame'.
+--   implementations of functions in 'MyLib.PositionalGame'. Game of the class
+--   are played on the vertices of of the graph.
 --
 --   New-types of 'ColoredGraph' can derive this using the
 --   'GeneralizedNewtypeDeriving' language extension.
-class ColoredGraphPositionalGame i a b g | g -> i, g -> a, g -> b where
+class ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
   toColoredGraph :: g -> ColoredGraph i (Maybe a) b
   fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
 
-instance ColoredGraphPositionalGame i a b (ColoredGraph i (Maybe a) b) where
+instance ColoredGraphVerticesPositionalGame i a b (ColoredGraph i (Maybe a) b) where
   toColoredGraph c = c
   fromColoredGraph _ = id
 
