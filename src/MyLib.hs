@@ -1,6 +1,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module MyLib (
     Player(..)
@@ -29,6 +31,12 @@ import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
+import ColoredGraph (
+    ColoredGraphVerticesPositionalGame(..)
+  , values
+  , coloredGraphGetVertexPosition
+  , coloredGraphSetVertexPosition
+  )
 #ifdef WASM
 import Data.Aeson (ToJSON(toJSON), Value(Number))
 import Data.Scientific (fromFloatDigits)
@@ -58,7 +66,10 @@ instance ToJSON Player where
 class PositionalGame a c | a -> c where
   -- | Takes the "current" state, a player, and a coordinate. Returns the new
   --   state if the move is valid.
+  --
+  --   The default implementation is 'takeEmptyMakeMove'.
   makeMove :: a -> Player -> c -> Maybe a
+  makeMove = takeEmptyMakeMove
   -- | Takes the "current" state and checks if the game is over, in which case
   --   the victorious player is returned or nothing in case of a draw.
   --
@@ -68,6 +79,8 @@ class PositionalGame a c | a -> c where
   gameOver :: a -> Maybe (Maybe Player)
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Maybe Player]
+  default positions :: (ColoredGraphVerticesPositionalGame c Player e a) => a -> [Maybe Player]
+  positions = values . toColoredGraph
   -- | Returns which player (or nothing) has taken the position at the given
   --   coordinate, or 'Nothing' if the given coordinate is invalid.
   --
@@ -75,9 +88,13 @@ class PositionalGame a c | a -> c where
   -- > Just (Just p) -- Player p owns this position
   -- > Just Nothing  -- This position is empty
   getPosition :: a -> c -> Maybe (Maybe Player)
+  default getPosition :: (ColoredGraphVerticesPositionalGame c Player e a, Ord c) => a -> c -> Maybe (Maybe Player)
+  getPosition = coloredGraphGetVertexPosition . toColoredGraph
   -- | Takes the position at the given coordinate for the given player and
   --   returns the new state, or 'Nothing' if the given coordinate is invalid.
   setPosition :: a -> c -> Player -> Maybe a
+  default setPosition :: (ColoredGraphVerticesPositionalGame c Player e a, Ord c) => a -> c -> Player -> Maybe a
+  setPosition g = coloredGraphSetVertexPosition (fromColoredGraph g) $ toColoredGraph g
 
 -- | A standard implementation of 'makeMove' for a 'PositionalGame'.
 --   Only allows move that "take" empty existing positions.
