@@ -242,6 +242,11 @@ coloredGraphSetPosition constructor c i p = if Map.member i c
     then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
     else Nothing
 
+-- | A class for games based on 'ColoredGraph's that allows them to use default
+--   implementations of functions in 'MyLib.PositionalGame'.
+--
+--   New-types of 'ColoredGraph' can derive this using the
+--   'GeneralizedNewtypeDeriving' language extension.
 class ColoredGraphPositionalGame i a b g | g -> i, g -> a, g -> b where
   toColoredGraph :: g -> ColoredGraph i (Maybe a) b
   fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
