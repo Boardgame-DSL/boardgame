@@ -16,10 +16,11 @@ module MyLib (
   , symmetric
   , unless
   , ifNotThen
+  , makerBreakerGameOver
 ) where
 
 import Data.List (find, intercalate)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
@@ -80,6 +81,20 @@ patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomoge
     reduceHomogeneousList :: (Eq a) => [Maybe a] -> Maybe a
     reduceHomogeneousList []     = Nothing
     reduceHomogeneousList (x:xs) = if all (== x) xs then x else Nothing
+
+-- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given
+--   a set of winning sets. Player1 wins when they "own" one of the winning
+--   sets. Player2 wins if Player1 cannot win.
+makerBreakerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
+makerBreakerGameOver patterns a
+  | player1won = Just (Just Player1)
+  | player2won = Just (Just Player2)
+  | boardisfull = Just (Just Player2)
+  | otherwise = Nothing
+  where
+    player1won = any (all ((== Just Player1) . fromJust . getPosition a)) patterns
+    player2won = all (any ((== Just Player2) . fromJust . getPosition a)) patterns
+    boardisfull = all isJust $ positions a
 
 -- | Plays a 'PositionalGame' in the console by taking alternating input from
 --   the players. Requires that the game is an instance of 'Show' and that its

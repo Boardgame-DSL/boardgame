@@ -42,6 +42,7 @@ import MyLib (
   , symmetric
   , player1LosesIf
   , unless
+  , makerBreakerGameOver
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -365,7 +366,7 @@ instance PositionalGame Hex2 (Int, Int) where
     then Just $ Hex2 n $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
   makeMove = takeEmptyMakeMove
-  gameOver (Hex2 n b) = patternMatchingGameOver (allWinningHexPaths n) (Hex2 n b)
+  gameOver (Hex2 n b) = makerBreakerGameOver (allWinningHexPaths n) (Hex2 n b)
 
 allWinningHexPaths :: Int -> [[(Int, Int)]]
 allWinningHexPaths n = winningSetPaths (paraHexGraph n) left right
@@ -595,12 +596,12 @@ instance PositionalGame Cross (Int, Int) where
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues (nextPlayer <$>)) $
         drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
-        criteria (player1LosesIf <$>
+        criteria (player1LosesIf <$> -- you lose if you have connected 2 opposite sides.
           [ anyConnections (==2) [side1, side4] . filterValues (== Just Player1)
           , anyConnections (==2) [side2, side5] . filterValues (== Just Player1)
           , anyConnections (==2) [side3, side6] . filterValues (== Just Player1)
           ]) `unless`
-        criteria (player1WinsIf <$>
+        criteria (player1WinsIf <$> -- you win if you have connected 3 non-adjacent sides.
           [ anyConnections (==3) [side1, side3, side5] . filterValues (== Just Player1)
           , anyConnections (==3) [side2, side4, side6] . filterValues (== Just Player1)
           ])

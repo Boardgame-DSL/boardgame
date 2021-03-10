@@ -198,6 +198,7 @@ inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 subgraph :: ColoredGraph i a b -> ColoredGraph i c d -> Bool
 subgraph = undefined
 
+-- returns the winning sets representing paths from one set to another on a graph.
 winningSetPaths :: Ord i => ColoredGraph i a b -> [i] -> [i] -> [[i]]
 winningSetPaths g is js = concat [foldTree (\(isLeaf, z) xs -> if isLeaf then [[z]] else concatMap (fmap (z:)) xs) $ winningSetPaths' g start i goal | i <- is]
   where
