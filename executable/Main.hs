@@ -62,6 +62,7 @@ import Math.Geometry.Grid as Grid ()
 import Math.Geometry.Grid.Hexagonal ()
 import ColoredGraph (
     ColoredGraph
+  , ColoredGraphPositionalGame(..)
   , paraHexGraph
   , values
   , anyConnections
@@ -329,11 +330,11 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   rowOffset = replicate (2*(hexSize-y-1)) ' '
   tileTop = concat $ replicate hexSize " / \\"
 
+instance ColoredGraphPositionalGame Hex (Int, Int) Player (Int, Int) where
+  toColoredGraph (Hex n b) = b
+  fromColoredGraph (Hex n _) = Hex n
+
 instance PositionalGame Hex (Int, Int) where
-  getPosition (Hex n b) = coloredGraphGetPosition b
-  positions (Hex n b) = values b
-  setPosition (Hex n b) = coloredGraphSetPosition (Hex n) b
-  makeMove = takeEmptyMakeMove
   gameOver (Hex n b) = criterion b
     where
       criterion =
@@ -357,12 +358,11 @@ newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
 instance Show Havannah where
   show (Havannah b) = show b
 
-instance PositionalGame Havannah (Int, Int) where
-  getPosition (Havannah b) = coloredGraphGetPosition b
-  positions (Havannah b) = values b
-  setPosition (Havannah b) = coloredGraphSetPosition Havannah b
-  makeMove = takeEmptyMakeMove
+instance ColoredGraphPositionalGame Havannah (Int, Int) Player () where
+  toColoredGraph (Havannah b) = b
+  fromColoredGraph _ = Havannah
 
+instance PositionalGame Havannah (Int, Int) where
   gameOver (Havannah b) = criterion b
     where
       criterion =
@@ -394,12 +394,11 @@ newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
 instance Show Yavalath where
   show (Yavalath b) = show b
 
-instance PositionalGame Yavalath (Int, Int) where
-  getPosition (Yavalath b) = coloredGraphGetPosition b
-  positions (Yavalath b) = values b
-  setPosition (Yavalath b) = coloredGraphSetPosition Yavalath b
-  makeMove = takeEmptyMakeMove
+instance ColoredGraphPositionalGame Yavalath (Int, Int) Player String where
+  toColoredGraph (Yavalath b) = b
+  fromColoredGraph _ = Yavalath
 
+instance PositionalGame Yavalath (Int, Int) where
   gameOver (Yavalath b) = criterion b
     where
       criterion =
@@ -436,12 +435,11 @@ data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
 instance Show MNKGame where
   show (MNKGame k b) = show b
 
-instance PositionalGame MNKGame (Int, Int) where
-  getPosition (MNKGame k b) = coloredGraphGetPosition b
-  positions (MNKGame k b) = values b
-  setPosition (MNKGame k b) = coloredGraphSetPosition (MNKGame k) b
-  makeMove = takeEmptyMakeMove
+instance ColoredGraphPositionalGame MNKGame (Int, Int) Player String where
+  toColoredGraph (MNKGame n b) = b
+  fromColoredGraph (MNKGame n _) = MNKGame n
 
+instance PositionalGame MNKGame (Int, Int) where
   gameOver (MNKGame k b) = criterion b
     where
       criterion =

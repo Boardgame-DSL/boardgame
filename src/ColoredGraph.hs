@@ -1,7 +1,9 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module ColoredGraph (
     ColoredGraph
+  , ColoredGraphPositionalGame(..)
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -239,6 +241,9 @@ coloredGraphSetPosition constructor c i p = if Map.member i c
     then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
     else Nothing
 
+class ColoredGraphPositionalGame g i a b | g -> i, g -> a, g -> b where
+  toColoredGraph :: g -> ColoredGraph i (Maybe a) b
+  fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
 
 
 
