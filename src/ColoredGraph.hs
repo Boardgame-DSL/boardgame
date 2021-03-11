@@ -35,7 +35,7 @@ import Data.Bifunctor ( bimap, Bifunctor (first, second) )
 --   "coordinates". The value of the map is a tuple of vertices color 'a', and
 --   a list of edges. The edges are tuples of edge color 'b' and
 --   "target coordinate" 'i'.
-type ColoredGraph i a b = Map i (a, [(b, i)])
+type ColoredGraph i a b = Map i (a, Map i b)
 
 type Coordinate = (Int, Int)
 
@@ -102,7 +102,7 @@ distance (x, y) (i, j) = (abs(x - i) + abs(x + y - i - j) + abs(y - j)) `div` 2
 --   the center. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
 hexHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, filter ((< radius) . distance (0, 0) . snd) $ (\i -> (hexDirections !! i, hexNeighbors z !! i )) <$> [0..5]))) <$> nodes)
+hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((< radius) . distance (0, 0) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0..5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = (0, 0) : concatMap hexHexGraphRing [1..radius-1]
@@ -118,7 +118,7 @@ hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, filter ((< radius) . di
 --   the center. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
 paraHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0) . snd) $ (\i -> (hexDirections !! i, hexNeighbors z !! i )) <$> [0..5]))) <$> nodes)
+paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0..5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..n-1], j <- [0..n-1]]
@@ -130,7 +130,7 @@ paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < n &
 --   left vertex. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
 rectOctGraph :: Int -> Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . snd) $ (\i -> (octoDirections !! i, octoNeighbors z !! i )) <$> [0..7]))) <$> nodes)
+rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . snd) $ (\i -> (octoNeighbors z !! i, octoDirections !! i)) <$> [0..7]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..m-1], j <- [0..n-1]]
@@ -146,12 +146,14 @@ firstJust f = listToMaybe . mapMaybe f
 
 -- Maps the vertices, and their outgoing edges with values, and collects the
 -- 'Just' results.
-mapMaybeG :: Ord i => ((a, [(b, i)]) -> Maybe c) -> ColoredGraph i a b -> ColoredGraph i c b
-mapMaybeG f g = Map.mapMaybe (\(a, xs) -> (, filter (\(_, k) -> isJust $ f $ fromJust $ Map.lookup k g) xs) <$> f (a, xs)) g
+mapMaybeG :: Ord i => ((a, Map i b) -> Maybe c) -> ColoredGraph i a b -> ColoredGraph i c b
+mapMaybeG f g = Map.map (second (Map.filterWithKey (\k _ -> Map.member k g'))) g'
+  where
+    g' = Map.mapMaybe (\(a, xs) -> (, xs) <$> f (a, xs)) g
 
 -- | Filters out any vertices whose value, and their outgoing edges with
 --   values, is not accepted by the predicate.
-filterG :: Ord i => ((a, [(b, i)]) -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
+filterG :: Ord i => ((a, Map i b) -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
 filterG pred = mapMaybeG (\(z, w) -> if pred (z, w) then Just z else Nothing)
 
 -- | Filters out any vertices whose value is not accepted by the predicate.
@@ -164,16 +166,16 @@ mapValues = fmap . first
 
 -- | Maps the values of edges with the given function.
 mapEdges :: Ord i => (b -> c) -> ColoredGraph i a b -> ColoredGraph i a c
-mapEdges = fmap . second . fmap . first
+mapEdges = fmap . second . fmap
 
 -- Returns a list of "coordinates" for vertices whose value, and their outgoing
 -- edges with values, are accepted by the predicate.
-nodesPred :: (a -> [(b, i)] -> Bool) -> ColoredGraph i a b -> [i]
+nodesPred :: (a -> Map i b -> Bool) -> ColoredGraph i a b -> [i]
 nodesPred pred g = fst <$> filter (uncurry pred . snd) (Map.toList g)
 
 -- | Filters out any edges whose value is not accepted by the predicate.
 filterEdges :: (b -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
-filterEdges pred = fmap $ second $ filter $ pred . fst
+filterEdges pred = Map.map $ second $ Map.filter pred
 
 -- Returns a path from i to j, including what edge value to take.
 path :: Ord i => ColoredGraph i a b -> i -> i -> Maybe [(b, i)]
@@ -184,9 +186,9 @@ path = path' Set.empty
 path' :: Ord i => Set i -> ColoredGraph i a b -> i -> i -> Maybe [(b, i)]
 path' s g i j
   | i == j = Just []
-  | otherwise = firstJust (\(d, k) -> ((d, k):) <$> path' s' g k j) $ filter (\(_, k) -> not $ k `Set.member` s') neighbours
+  | otherwise = firstJust (\(k, d) -> ((d, k):) <$> path' s' g k j) $ filter (\(k, _) -> not $ k `Set.member` s') neighbours
   where
-    (_, neighbours) = g Map.! i
+    neighbours = Map.assocs $ snd $ g Map.! i
     s' = Set.insert i s
 
 
@@ -207,8 +209,8 @@ component  g = fst . component' Set.empty  g
     component' :: Ord i => Set i -> ColoredGraph i a b -> i -> ([i], Set i)
     component' inputState  g i = (i : xs, newState)
       where
-        (_, neighbours) = g Map.! i
-        (xs, newState) = foldl tmp ([], Set.insert i inputState) (snd <$> neighbours)
+        neighbours = Map.assocs $ snd $ g Map.! i
+        (xs, newState) = foldl tmp ([], Set.insert i inputState) (fst <$> neighbours)
 
         tmp (ks, state) k
           | k `Set.member` state = (ks, state)
