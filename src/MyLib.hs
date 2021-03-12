@@ -32,7 +32,8 @@ import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
 import ColoredGraph (
-    ColoredGraphVerticesPositionalGame(..)
+    ColoredGraphTransformer(..)
+  , ColoredGraphVerticesPositionalGame
   , values
   , coloredGraphGetVertexPosition
   , coloredGraphSetVertexPosition

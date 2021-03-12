@@ -4,7 +4,8 @@
 
 module ColoredGraph (
     ColoredGraph
-  , ColoredGraphVerticesPositionalGame(..)
+  , ColoredGraphTransformer(..)
+  , ColoredGraphVerticesPositionalGame
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -244,19 +245,24 @@ coloredGraphSetVertexPosition constructor c i p = if Map.member i c
     then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
     else Nothing
 
--- | A class for games based on 'ColoredGraph's that allows them to use default
---   implementations of functions in 'MyLib.PositionalGame'. Game of the class
---   are played on the vertices of of the graph.
+-- | A utility class for transforming to and from 'ColoredGraph'.
 --
 --   New-types of 'ColoredGraph' can derive this using the
 --   'GeneralizedNewtypeDeriving' language extension.
-class ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
+class ColoredGraphTransformer i a b g | g -> i, g -> a, g -> b where
+  -- | "Extracts" the 'ColoredGraph' from a container type.
   toColoredGraph :: g -> ColoredGraph i (Maybe a) b
+  -- | "Inserts" the 'ColoredGraph' into an already existing container type.
   fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
 
-instance ColoredGraphVerticesPositionalGame i a b (ColoredGraph i (Maybe a) b) where
+instance ColoredGraphTransformer i a b (ColoredGraph i (Maybe a) b) where
   toColoredGraph c = c
   fromColoredGraph _ = id
+
+-- | A class for games based on 'ColoredGraph's that allows them to use default
+--   implementations of functions in 'MyLib.PositionalGame'. Game of the class
+--   are played on the vertices of of the graph.
+class (ColoredGraphTransformer i a b g) => ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
 
 
 

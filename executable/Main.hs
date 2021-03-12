@@ -68,7 +68,8 @@ import Math.Geometry.Grid as Grid ()
 import Math.Geometry.Grid.Hexagonal ()
 import ColoredGraph (
     ColoredGraph
-  , ColoredGraphVerticesPositionalGame(..)
+  , ColoredGraphTransformer(..)
+  , ColoredGraphVerticesPositionalGame
   , paraHexGraph
   , values
   , anyConnections
@@ -398,9 +399,11 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   rowOffset = replicate (2*(hexSize-y-1)) ' '
   tileTop = concat $ replicate hexSize " / \\"
 
-instance ColoredGraphVerticesPositionalGame (Int, Int) Player (Int, Int) Hex where
+instance ColoredGraphTransformer (Int, Int) Player (Int, Int) Hex where
   toColoredGraph (Hex n b) = b
   fromColoredGraph (Hex n _) = Hex n
+
+instance ColoredGraphVerticesPositionalGame (Int, Int) Player (Int, Int) Hex
 
 instance PositionalGame Hex (Int, Int) where
   gameOver (Hex n b) = criterion b
@@ -422,7 +425,7 @@ instance PositionalGame Hex (Int, Int) where
 -------------------------------------------------------------------------------
 
 newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
-  deriving (ColoredGraphVerticesPositionalGame (Int, Int) Player ())
+  deriving (ColoredGraphTransformer (Int, Int) Player (), ColoredGraphVerticesPositionalGame (Int, Int) Player ())
 
 instance Show Havannah where
   show (Havannah b) = show b
@@ -455,7 +458,7 @@ emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
 -------------------------------------------------------------------------------
 
 newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
-  deriving (ColoredGraphVerticesPositionalGame (Int, Int) Player String)
+  deriving (ColoredGraphTransformer (Int, Int) Player String, ColoredGraphVerticesPositionalGame (Int, Int) Player String)
 
 instance Show Yavalath where
   show (Yavalath b) = show b
@@ -497,9 +500,11 @@ data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
 instance Show MNKGame where
   show (MNKGame k b) = show b
 
-instance ColoredGraphVerticesPositionalGame (Int, Int) Player String MNKGame where
+instance ColoredGraphTransformer (Int, Int) Player String MNKGame where
   toColoredGraph (MNKGame n b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
+
+instance ColoredGraphVerticesPositionalGame (Int, Int) Player String MNKGame
 
 instance PositionalGame MNKGame (Int, Int) where
   gameOver (MNKGame k b) = criterion b
