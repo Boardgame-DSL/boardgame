@@ -235,14 +235,14 @@ inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphGetVertexPosition :: Ord i => ColoredGraph i (Maybe a) b -> i -> Maybe (Maybe a)
+coloredGraphGetVertexPosition :: Ord i => ColoredGraph i a b -> i -> Maybe a
 coloredGraphGetVertexPosition c i = fst <$> Map.lookup i c
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetVertexPosition :: Ord i => (ColoredGraph i (Maybe a) b -> c) -> ColoredGraph i (Maybe a) b -> i -> a -> Maybe c
+coloredGraphSetVertexPosition :: Ord i => (ColoredGraph i a b -> c) -> ColoredGraph i a b -> i -> a -> Maybe c
 coloredGraphSetVertexPosition constructor c i p = if Map.member i c
-    then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
+    then Just $ constructor $ Map.adjust (\(_, xs) -> (p, xs)) i c
     else Nothing
 
 -- | A utility class for transforming to and from 'ColoredGraph'.
@@ -251,11 +251,11 @@ coloredGraphSetVertexPosition constructor c i p = if Map.member i c
 --   'GeneralizedNewtypeDeriving' language extension.
 class ColoredGraphTransformer i a b g | g -> i, g -> a, g -> b where
   -- | "Extracts" the 'ColoredGraph' from a container type.
-  toColoredGraph :: g -> ColoredGraph i (Maybe a) b
+  toColoredGraph :: g -> ColoredGraph i a b
   -- | "Inserts" the 'ColoredGraph' into an already existing container type.
-  fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
+  fromColoredGraph :: g -> ColoredGraph i a b -> g
 
-instance ColoredGraphTransformer i a b (ColoredGraph i (Maybe a) b) where
+instance ColoredGraphTransformer i a b (ColoredGraph i a b) where
   toColoredGraph c = c
   fromColoredGraph _ = id
 
