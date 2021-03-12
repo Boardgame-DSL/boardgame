@@ -6,6 +6,7 @@ module ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
   , ColoredGraphVerticesPositionalGame
+  , ColoredGraphEdgesPositionalGame
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -20,6 +21,10 @@ module ColoredGraph (
   , values
   , coloredGraphSetVertexPosition
   , coloredGraphGetVertexPosition
+  , coloredGraphEdgePositions
+  , coloredGraphGetEdgePosition
+  , coloredGraphSetEdgePosition
+  , coloredGraphSetBidirectedEdgePosition
 ) where
 
 import Data.Map (Map)
@@ -245,6 +250,36 @@ coloredGraphSetVertexPosition constructor c i p = if Map.member i c
     then Just $ constructor $ Map.adjust (\(_, xs) -> (p, xs)) i c
     else Nothing
 
+-- | A standard implementation of 'MyLib.positions' for games
+--   with an underlying 'ColoredGraph' played on the edges.
+coloredGraphEdgePositions :: Ord i => ColoredGraph i a b -> [b]
+coloredGraphEdgePositions c = Map.elems c >>= (Map.elems . snd)
+
+-- | A standard implementation of 'MyLib.getPosition' for games
+--   with an underlying 'ColoredGraph' played on the edges.
+coloredGraphGetEdgePosition :: Ord i => ColoredGraph i a b -> (i, i) -> Maybe b
+coloredGraphGetEdgePosition c (from, to) = Map.lookup from c >>= (Map.lookup to . snd)
+
+-- | A standard implementation of 'MyLib.setPosition' for games
+--   with an underlying 'ColoredGraph' played on the vertices.
+coloredGraphSetEdgePosition :: Ord i => (ColoredGraph i a b -> c) -> ColoredGraph i a b -> (i, i) -> b -> Maybe c
+coloredGraphSetEdgePosition constructor c (from, to) p = Map.lookup from c >>=
+  \(a, edges) -> if Map.member to edges
+    then Just $ constructor $ Map.insert from (a, Map.insert to p edges) c
+    else Nothing
+
+-- | Like 'coloredGraphSetEdgePosition' but sets the value to the edges in both
+--   directions.
+coloredGraphSetBidirectedEdgePosition :: Ord i => (ColoredGraph i a b -> c) -> ColoredGraph i a b -> (i, i) -> b -> Maybe c
+coloredGraphSetBidirectedEdgePosition constructor c (from, to) p = Map.lookup from c >>=
+  (\(a, edges) -> if Map.member to edges
+    then Just $ Map.insert from (a, Map.insert to p edges) c
+    else Nothing) >>=
+  \c' -> Map.lookup to c' >>=
+    \(a, edges) -> if Map.member from edges
+      then Just $ constructor $ Map.insert to (a, Map.insert from p edges) c'
+      else Nothing
+
 -- | A utility class for transforming to and from 'ColoredGraph'.
 --
 --   New-types of 'ColoredGraph' can derive this using the
@@ -263,6 +298,11 @@ instance ColoredGraphTransformer i a b (ColoredGraph i a b) where
 --   implementations of functions in 'MyLib.PositionalGame'. Game of the class
 --   are played on the vertices of of the graph.
 class (ColoredGraphTransformer i a b g) => ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
+
+-- | A class for games based on 'ColoredGraph's that allows them to use default
+--   implementations of functions in 'MyLib.PositionalGame'. Game of the class
+--   are played on the edges of of the graph.
+class (ColoredGraphTransformer i a b g) => ColoredGraphEdgesPositionalGame i a b g | g -> i, g -> a, g -> b where
 
 
 

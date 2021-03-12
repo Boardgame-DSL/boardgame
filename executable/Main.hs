@@ -81,7 +81,11 @@ import ColoredGraph (
   , hexHexGraph
   , mapEdges
   , rectOctGraph
-  , inARow)
+  , inARow
+  , coloredGraphEdgePositions
+  , coloredGraphGetEdgePosition
+  , coloredGraphSetBidirectedEdgePosition
+  )
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -238,15 +242,9 @@ data ShannonSwitchingGameCG = ShannonSwitchingGameCG {
   deriving (Show)
 
 instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
-  positions ShannonSwitchingGameCG{ graph } = elems graph >>= (elems . snd)
-  getPosition ShannonSwitchingGameCG{ graph } (from, to) = lookup from graph >>= (lookup to . snd)
-  setPosition ssg@ShannonSwitchingGameCG{ graph } (from, to) p = lookup from graph >>=
-    (\eg -> if member to $ snd eg
-      then Just $ ssg{
-        graph = adjust (second (insert from (Just p))) to $
-          adjust (second (insert to (Just p))) from graph
-      }
-      else Nothing)
+  positions ShannonSwitchingGameCG{ graph } = coloredGraphEdgePositions graph
+  getPosition ShannonSwitchingGameCG{ graph } = coloredGraphGetEdgePosition graph
+  setPosition ssg@ShannonSwitchingGameCG{ graph } c p = coloredGraphSetBidirectedEdgePosition (\g -> ssg{ graph = g }) graph c (Just p)
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
       ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
     where
