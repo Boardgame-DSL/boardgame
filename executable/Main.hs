@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Main where
 
@@ -28,6 +29,8 @@ import Data.Map (
   , member
   , (!)
   , adjust
+  , alter
+  , empty
   )
 import Data.Maybe (fromJust, isJust, fromMaybe)
 import MyLib (
@@ -38,6 +41,7 @@ import MyLib (
   , takeEmptyMakeMove
   , nextPlayer
   , drawIf
+  , ifNotThen
   , player1WinsIf
   , player2WinsIf
   , criteria
@@ -51,6 +55,7 @@ import Control.Applicative ((<|>))
 import Data.Tuple (swap)
 import qualified Data.Array ((!))
 import Data.Foldable (toList)
+import Data.Bifunctor (Bifunctor(second))
 
 #ifdef WASM
 import qualified Data.Vector as V ((!), fromList)
@@ -69,6 +74,7 @@ import ColoredGraph (
   , anyConnections
   , mapValues
   , filterValues
+  , filterEdges
   , filterG
   , components
   , hexHexGraph
@@ -216,6 +222,69 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
     | otherwise = Nothing
     where
       g = buildG (0, n * n - 1) (map fst $ filter ((== Just Player1) . snd) l)
+
+-------------------------------------------------------------------------------
+-- * Shannon Switching Game (On a ColoredGraph)
+-------------------------------------------------------------------------------
+
+-- Operates under the invariant that all edges in 'graph' are bi-directional
+-- and their values are in sync.
+data ShannonSwitchingGameCG = ShannonSwitchingGameCG {
+    start :: Int
+  , goal  :: Int
+  , graph :: ColoredGraph Int () (Maybe Player)
+  }
+  deriving (Show)
+
+instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
+  positions ShannonSwitchingGameCG{ graph } = elems graph >>= (elems . snd)
+  getPosition ShannonSwitchingGameCG{ graph } (from, to) = lookup from graph >>= (lookup to . snd)
+  setPosition ssg@ShannonSwitchingGameCG{ graph } (from, to) p = lookup from graph >>=
+    (\eg -> if member to $ snd eg
+      then Just $ ssg{
+        graph = adjust (second (insert from (Just p))) to $
+          adjust (second (insert to (Just p))) from graph
+      }
+      else Nothing)
+  gameOver ShannonSwitchingGameCG{ start, goal, graph } =
+      ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
+    where
+      winPath = anyConnections (==2) [[start], [goal]] . filterEdges (== Just Player1)
+      losePath = not . anyConnections (==2) [[start], [goal]] . filterEdges (/= Just Player2)
+
+createEmptyShannonSwitchingGameCG :: [(Int, Int)] -> Int -> Int -> ShannonSwitchingGameCG
+createEmptyShannonSwitchingGameCG pairs start goal = ShannonSwitchingGameCG{
+      start
+    , goal
+    , graph = foldl addPathToMap empty $ pairs >>= (\(from, to) -> [(from, to), (to, from)])
+  }
+  where
+    addPathToMap m (from, to) = alter updateOrInsert from m
+      where
+        updateOrInsert existing = case existing of
+          Just (a, edges) -> Just (a, insert to Nothing edges)
+          Nothing -> Just ((), fromList [(to, Nothing)])
+
+-- Creates a 'ShannonSwitchingGameCG' on a graph like the one from Wikipedia.
+-- https://en.wikipedia.org/wiki/Shannon_switching_game#/media/File:Shannon_game_graph.svg
+wikipediaReplica :: ShannonSwitchingGameCG
+wikipediaReplica = createEmptyShannonSwitchingGameCG connections 0 3
+  where
+    connections = [
+        (0, 1)
+      , (0, 4)
+      , (0, 7)
+      , (1, 2)
+      , (1, 5)
+      , (2, 3)
+      , (4, 5)
+      , (4, 6)
+      , (4, 7)
+      , (5, 3)
+      , (5, 6)
+      , (6, 3)
+      , (7, 6)
+      ]
 
 -------------------------------------------------------------------------------
 -- * Gale
@@ -477,6 +546,7 @@ main = do
   putStrLn "5: Hex"
   putStrLn "6: Havannah"
   putStrLn "7: Yavalath"
+  putStrLn "8: Shannon Switching Game (On a ColoredGraph)"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -490,6 +560,7 @@ main = do
     5 -> playIO $ emptyHex 5
     6 -> playIO $ emptyHavannah 8
     7 -> playIO $ emptyYavalath 2
+    8 -> playIO wikipediaReplica
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
