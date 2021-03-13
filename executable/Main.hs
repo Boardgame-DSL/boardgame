@@ -56,7 +56,7 @@ import Data.Foldable (toList)
 import qualified Data.Vector as V ((!), fromList)
 import Data.Aeson
 import Data.Aeson.Types
-import MyLib.Web (defaultWebGame)
+import MyLib.Web (addWebGame, webReady)
 #endif
 
 import Math.Geometry.Grid as Grid ()
@@ -428,6 +428,11 @@ data MNKGame = MNKGame Int (ColoredGraph (Int, Int) (Maybe Player) String)
 instance Show MNKGame where
   show (MNKGame k b) = show b
 
+#if WASM
+instance ToJSON MNKGame where
+  toJSON (MNKGame _ b) = toJSON b
+#endif
+
 instance ColoredGraphVerticesPositionalGame (Int, Int) Player String MNKGame where
   toColoredGraph (MNKGame n b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
@@ -466,7 +471,10 @@ emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
 
 #ifdef WASM
 main :: IO ()
-main = defaultWebGame $ emptyHex 5
+main = do
+  addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
+  addWebGame "Hex" $ emptyHex 5
+  webReady
 #else
 main :: IO ()
 main = do
