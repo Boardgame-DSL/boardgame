@@ -81,6 +81,7 @@ import ColoredGraph (
   , mapEdges
   , rectOctGraph
   , inARow
+  , coloredGraphVertexPositions
   , coloredGraphGetVertexPosition
   , coloredGraphSetVertexPosition
   , coloredGraphEdgePositions
@@ -407,7 +408,7 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) (Int, Int) Hex where
   fromColoredGraph (Hex n _) = Hex n
 
 instance PositionalGame Hex (Int, Int) where
-  positions (Hex _ b) = values b
+  positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (Hex n b) = criterion b
@@ -435,7 +436,7 @@ instance Show Havannah where
   show (Havannah b) = show b
 
 instance PositionalGame Havannah (Int, Int) where
-  positions (Havannah b) = values b
+  positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (Havannah b) = criterion b
@@ -471,7 +472,7 @@ instance Show Yavalath where
   show (Yavalath b) = show b
 
 instance PositionalGame Yavalath (Int, Int) where
-  positions (Yavalath b) = values b
+  positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (Yavalath b) = criterion b
@@ -515,7 +516,7 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) String MNKGame where
   fromColoredGraph (MNKGame n _) = MNKGame n
 
 instance PositionalGame MNKGame (Int, Int) where
-  positions (MNKGame _ b) = values b
+  positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (MNKGame k b) = criterion b

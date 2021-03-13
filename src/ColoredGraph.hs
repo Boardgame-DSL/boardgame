@@ -17,6 +17,7 @@ module ColoredGraph (
   , anyConnections
   , inARow
   , values
+  , coloredGraphVertexPositions
   , coloredGraphSetVertexPosition
   , coloredGraphGetVertexPosition
   , coloredGraphEdgePositions
@@ -32,6 +33,7 @@ import qualified Data.Set as Set
 import Data.List ( find, intersect )
 import Data.Maybe ( fromJust, isJust, listToMaybe, mapMaybe )
 import Data.Tree ()
+import Control.Monad ((<=<))
 import Data.Bifunctor ( bimap, Bifunctor (first, second) )
 
 
@@ -236,6 +238,13 @@ anyConnections pred groups g = any (\z -> pred $ length $ filter (not . Prelude.
 inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
 inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
+-- | A standard implementation of 'MyLib.positions' for games
+--   with an underlying 'ColoredGraph' played on the vertices.
+--
+--   For 'ColoredGraph's, this is a synonym of 'values'.
+coloredGraphVertexPositions :: (ColoredGraphTransformer i a b g, Ord i) => g -> [a]
+coloredGraphVertexPositions = values . toColoredGraph
+
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
 coloredGraphGetVertexPosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> i -> Maybe a
@@ -253,7 +262,7 @@ coloredGraphSetVertexPosition g i p = if Map.member i c
 -- | A standard implementation of 'MyLib.positions' for games
 --   with an underlying 'ColoredGraph' played on the edges.
 coloredGraphEdgePositions :: (ColoredGraphTransformer i a b g, Ord i) => g -> [b]
-coloredGraphEdgePositions g = Map.elems (toColoredGraph g) >>= (Map.elems . snd)
+coloredGraphEdgePositions = Map.elems . snd <=< Map.elems . toColoredGraph
 
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the edges.
