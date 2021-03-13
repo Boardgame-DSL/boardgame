@@ -243,9 +243,9 @@ coloredGraphGetVertexPosition c i = fst <$> Map.lookup i c
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetVertexPosition :: Ord i => (ColoredGraph i a b -> c) -> ColoredGraph i a b -> i -> a -> Maybe c
-coloredGraphSetVertexPosition constructor c i p = if Map.member i c
-    then Just $ constructor $ Map.adjust (\(_, xs) -> (p, xs)) i c
+coloredGraphSetVertexPosition :: Ord i => ColoredGraph i a b -> i -> a -> Maybe (ColoredGraph i a b)
+coloredGraphSetVertexPosition c i p = if Map.member i c
+    then Just $ Map.adjust (\(_, xs) -> (p, xs)) i c
     else Nothing
 
 -- | A standard implementation of 'MyLib.positions' for games
@@ -260,23 +260,17 @@ coloredGraphGetEdgePosition c (from, to) = Map.lookup from c >>= (Map.lookup to 
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetEdgePosition :: Ord i => (ColoredGraph i a b -> c) -> ColoredGraph i a b -> (i, i) -> b -> Maybe c
-coloredGraphSetEdgePosition constructor c (from, to) p = Map.lookup from c >>=
+coloredGraphSetEdgePosition :: Ord i => ColoredGraph i a b -> (i, i) -> b -> Maybe (ColoredGraph i a b)
+coloredGraphSetEdgePosition c (from, to) p = Map.lookup from c >>=
   \(a, edges) -> if Map.member to edges
-    then Just $ constructor $ Map.insert from (a, Map.insert to p edges) c
+    then Just $ Map.insert from (a, Map.insert to p edges) c
     else Nothing
 
 -- | Like 'coloredGraphSetEdgePosition' but sets the value to the edges in both
 --   directions.
-coloredGraphSetBidirectedEdgePosition :: Ord i => (ColoredGraph i a b -> c) -> ColoredGraph i a b -> (i, i) -> b -> Maybe c
-coloredGraphSetBidirectedEdgePosition constructor c (from, to) p = Map.lookup from c >>=
-  (\(a, edges) -> if Map.member to edges
-    then Just $ Map.insert from (a, Map.insert to p edges) c
-    else Nothing) >>=
-  \c' -> Map.lookup to c' >>=
-    \(a, edges) -> if Map.member from edges
-      then Just $ constructor $ Map.insert to (a, Map.insert from p edges) c'
-      else Nothing
+coloredGraphSetBidirectedEdgePosition :: Ord i => ColoredGraph i a b -> (i, i) -> b -> Maybe (ColoredGraph i a b)
+coloredGraphSetBidirectedEdgePosition c (from, to) p = coloredGraphSetEdgePosition c (from, to) p >>=
+  \c' -> coloredGraphSetEdgePosition c' (to, from) p
 
 -- | A utility class for transforming to and from 'ColoredGraph'.
 --
