@@ -81,13 +81,13 @@ class PositionalGame a c | a -> c where
   getPosition :: a -> c -> Maybe (Maybe Player)
   -- | Takes the position at the given coordinate for the given player and
   --   returns the new state, or 'Nothing' if the given coordinate is invalid.
-  setPosition :: a -> c -> Player -> Maybe a
+  setPosition :: a -> c -> Maybe Player -> Maybe a
 
 -- | A standard implementation of 'makeMove' for a 'PositionalGame'.
 --   Only allows move that "take" empty existing positions.
 takeEmptyMakeMove :: PositionalGame a c => a -> Player -> c -> Maybe a
 takeEmptyMakeMove a p coord = case getPosition a coord of
-  Just Nothing -> setPosition a coord p
+  Just Nothing -> setPosition a coord (Just p)
   _            -> Nothing
 
 -- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given

@@ -140,7 +140,7 @@ instance PositionalGame TicTacToe (Integer, Integer) where
   -- Just returns the elements in the underlying Map
   positions (TicTacToe b) = elems b
   -- If the underlying Map has the given coordinate, update it with the given player
-  setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c (Just p) b else Nothing
+  setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c p b else Nothing
   -- "Creates" a `gameOver` function by supplying all the winning "patterns"
   gameOver = patternMatchingGameOver [
       [(0, 0), (0, 1), (0, 2)]
@@ -177,7 +177,7 @@ instance PositionalGame ArithmeticProgressionGame Int where
   getPosition (ArithmeticProgressionGame _ l) i = if i <= length l then Just $ l !! (i - 1) else Nothing
   positions (ArithmeticProgressionGame _ l) = l
   setPosition (ArithmeticProgressionGame k l) i p = if i <= length l
-    then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ Just p : drop i l)
+    then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ p : drop i l)
     else Nothing
   gameOver a@(ArithmeticProgressionGame k l) = let n = length l
     in patternMatchingGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a
@@ -220,7 +220,7 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
   getPosition (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
   positions (ShannonSwitchingGame (_, l)) = map snd l
   setPosition (ShannonSwitchingGame (n, l)) c p = case findIndex ((== c) . fst) l of
-    Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, Just p) : drop (i + 1) l)
+    Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, p) : drop (i + 1) l)
     Nothing -> Nothing
   gameOver (ShannonSwitchingGame (n, l))
     | path g 0 (n * n - 1) = Just (Just Player1)
@@ -250,7 +250,7 @@ instance ColoredGraphTransformer Int () (Maybe Player) ShannonSwitchingGameCG wh
 instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
   positions = coloredGraphEdgePositions
   getPosition = coloredGraphGetEdgePosition
-  setPosition ssg c p = coloredGraphSetBidirectedEdgePosition ssg c (Just p)
+  setPosition = coloredGraphSetBidirectedEdgePosition
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
       ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
     where
@@ -348,7 +348,7 @@ instance PositionalGame Gale (Integer, Integer) where
   getPosition (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing
     where c = (x `div` 2, y)
   positions (Gale b) = elems b
-  setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c (Just p) b else Nothing
+  setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c p b else Nothing
     where c = (x `div` 2, y)
   gameOver (Gale b)
     | all isJust (elems b) = Just Nothing
@@ -410,7 +410,7 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) (Int, Int) Hex where
 instance PositionalGame Hex (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Hex n b) = criterion b
     where
       criterion =
@@ -438,7 +438,7 @@ instance Show Havannah where
 instance PositionalGame Havannah (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Havannah b) = criterion b
     where
       criterion =
@@ -474,7 +474,7 @@ instance Show Yavalath where
 instance PositionalGame Yavalath (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Yavalath b) = criterion b
     where
       criterion =
@@ -518,7 +518,7 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) String MNKGame where
 instance PositionalGame MNKGame (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (MNKGame k b) = criterion b
     where
       criterion =
