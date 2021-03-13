@@ -1,6 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module ColoredGraph (
     ColoredGraph
@@ -252,9 +253,9 @@ coloredGraphGetVertexPosition g i = fst <$> Map.lookup i (toColoredGraph g)
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetVertexPosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> i -> a -> Maybe g
+coloredGraphSetVertexPosition :: (ColoredGraphTransformer i (Maybe a) b g, Ord i) => g -> i -> a -> Maybe g
 coloredGraphSetVertexPosition g i p = if Map.member i c
-    then Just $ fromColoredGraph g $ Map.adjust (\(_, xs) -> (p, xs)) i c
+    then Just $ fromColoredGraph g $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
     else Nothing
   where
     c = toColoredGraph g
@@ -271,17 +272,17 @@ coloredGraphGetEdgePosition g (from, to) = Map.lookup from (toColoredGraph g) >>
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> b -> Maybe g
+coloredGraphSetEdgePosition :: (ColoredGraphTransformer i a (Maybe b) g, Ord i) => g -> (i, i) -> b -> Maybe g
 coloredGraphSetEdgePosition g (from, to) p = Map.lookup from c >>=
     \(a, edges) -> if Map.member to edges
-      then Just $ fromColoredGraph g $ Map.insert from (a, Map.insert to p edges) c
+      then Just $ fromColoredGraph g $ Map.insert from (a, Map.insert to (Just p) edges) c
       else Nothing
   where
     c = toColoredGraph g
 
 -- | Like 'coloredGraphSetEdgePosition' but sets the value to the edges in both
 --   directions.
-coloredGraphSetBidirectedEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> b -> Maybe g
+coloredGraphSetBidirectedEdgePosition :: (ColoredGraphTransformer i a (Maybe b) g, Ord i) => g -> (i, i) -> b -> Maybe g
 coloredGraphSetBidirectedEdgePosition c (from, to) p = coloredGraphSetEdgePosition c (from, to) p >>=
   \c' -> coloredGraphSetEdgePosition c' (to, from) p
 

@@ -250,7 +250,7 @@ instance ColoredGraphTransformer Int () (Maybe Player) ShannonSwitchingGameCG wh
 instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
   positions = coloredGraphEdgePositions
   getPosition = coloredGraphGetEdgePosition
-  setPosition ssg c p = coloredGraphSetBidirectedEdgePosition ssg c (Just p)
+  setPosition = coloredGraphSetBidirectedEdgePosition
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
       ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
     where
@@ -410,7 +410,7 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) (Int, Int) Hex where
 instance PositionalGame Hex (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Hex n b) = criterion b
     where
       criterion =
@@ -438,7 +438,7 @@ instance Show Havannah where
 instance PositionalGame Havannah (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Havannah b) = criterion b
     where
       criterion =
@@ -474,7 +474,7 @@ instance Show Yavalath where
 instance PositionalGame Yavalath (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Yavalath b) = criterion b
     where
       criterion =
@@ -518,7 +518,7 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) String MNKGame where
 instance PositionalGame MNKGame (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
-  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
+  setPosition = coloredGraphSetVertexPosition
   gameOver (MNKGame k b) = criterion b
     where
       criterion =
