@@ -2,7 +2,7 @@
 
 module MyLib.Web (
     playWeb
-  , webDefaultMain
+  , defaultWebGame
 ) where
 
 import Asterius.Aeson (jsonFromJSVal, jsonToJSVal)
@@ -24,15 +24,16 @@ foreign import javascript safe "boardgame._getMove()" jsGetMove :: IO JSVal
 foreign import javascript "boardgame._putInvalidInput()" jsPutInvalidInput :: IO ()
 foreign import javascript "boardgame._putInvalidMove()" jsPutInvalidMove :: IO ()
 foreign import javascript "boardgame._putGameOver($1)" jsPutGameOver :: JSVal -> IO ()
-foreign import javascript "boardgame.startGame = $1" jsSetGame :: JSVal -> IO ()
+foreign import javascript "boardgame.games[$1] = $2" jsSetGame :: JSVal -> JSVal -> IO ()
 foreign import javascript "boardgame._ready()" jsReady :: IO ()
 
--- | A main function for running games as a we app. Initializes the game and
---   "tells" JavaScript it's ready. Then JavaScript can start games whenever.
-webDefaultMain :: (ToJSON a, FromJSON c, PositionalGame a c) => a -> IO ()
-webDefaultMain startState = do
+-- | A main function for running games as a web app. Initializes the provided
+--   game as "default" and "tells" JavaScript it's ready. Then JavaScript can
+--   start games whenever.
+defaultWebGame :: (ToJSON a, FromJSON c, PositionalGame a c) => a -> IO ()
+defaultWebGame startState = do
   callback <- jsMakeCallback $ playWeb startState
-  jsSetGame callback
+  jsSetGame (jsonToJSVal "default") callback
   jsReady
 
 -- | Plays a 'PositionalGame' with the help of JavaScript FFI. The state of the

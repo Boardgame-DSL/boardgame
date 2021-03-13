@@ -56,7 +56,7 @@ import Data.Foldable (toList)
 import qualified Data.Vector as V ((!), fromList)
 import Data.Aeson
 import Data.Aeson.Types
-import MyLib.Web (webDefaultMain)
+import MyLib.Web (defaultWebGame)
 #endif
 
 import Math.Geometry.Grid as Grid ()
@@ -466,7 +466,7 @@ emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
 
 #ifdef WASM
 main :: IO ()
-main = webDefaultMain $ emptyHex 5
+main = defaultWebGame $ emptyHex 5
 #else
 main :: IO ()
 main = do
