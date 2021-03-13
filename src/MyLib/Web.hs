@@ -3,6 +3,8 @@
 module MyLib.Web (
     playWeb
   , defaultWebGame
+  , addWebGame
+  , webReady
 ) where
 
 import Asterius.Aeson (jsonFromJSVal, jsonToJSVal)
@@ -35,6 +37,17 @@ defaultWebGame startState = do
   callback <- jsMakeCallback $ playWeb startState
   jsSetGame (jsonToJSVal "default") callback
   jsReady
+
+-- | Adds a named game to the list of games accessible from JavaScript.
+addWebGame :: (ToJSON a, FromJSON c, PositionalGame a c) => String -> a -> IO ()
+addWebGame name startState = do
+  callback <- jsMakeCallback $ playWeb startState
+  jsSetGame (jsonToJSVal name) callback
+
+-- | Lets JavaScript know that the Haskell backend is up and running by firing
+--   the ready event.
+webReady :: IO ()
+webReady = jsReady
 
 -- | Plays a 'PositionalGame' with the help of JavaScript FFI. The state of the
 --   game ('a') needs to implement 'Data.Aeson.ToJSON' and the coordinates
