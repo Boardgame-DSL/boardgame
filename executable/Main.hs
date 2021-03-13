@@ -441,7 +441,7 @@ instance PositionalGame MNKGame (Int, Int) where
         symmetric (mapValues $ fmap nextPlayer) $
         drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
         -- Player1 wins if there are k or more pieces in a row in any direction.
-        criteria (player1WinsIf . inARow (>=k) <$> directions)
+        (criteria (player1WinsIf . inARow (>=k) <$> directions) . filterValues (== Just Player1))
           
 
       directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
