@@ -69,7 +69,6 @@ import Math.Geometry.Grid.Hexagonal ()
 import ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
-  , ColoredGraphVerticesPositionalGame
   , paraHexGraph
   , values
   , anyConnections
@@ -82,6 +81,8 @@ import ColoredGraph (
   , mapEdges
   , rectOctGraph
   , inARow
+  , coloredGraphGetVertexPosition
+  , coloredGraphSetVertexPosition
   , coloredGraphEdgePositions
   , coloredGraphGetEdgePosition
   , coloredGraphSetBidirectedEdgePosition
@@ -401,9 +402,10 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) (Int, Int) Hex where
   toColoredGraph (Hex n b) = b
   fromColoredGraph (Hex n _) = Hex n
 
-instance ColoredGraphVerticesPositionalGame (Int, Int) (Maybe Player) (Int, Int) Hex
-
 instance PositionalGame Hex (Int, Int) where
+  positions (Hex _ b) = values b
+  getPosition (Hex _ b) = coloredGraphGetVertexPosition b
+  setPosition (Hex n b) c p = coloredGraphSetVertexPosition (Hex n) b c (Just p)
   gameOver (Hex n b) = criterion b
     where
       criterion =
@@ -423,12 +425,15 @@ instance PositionalGame Hex (Int, Int) where
 -------------------------------------------------------------------------------
 
 newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
-  deriving (ColoredGraphTransformer (Int, Int) (Maybe Player) (), ColoredGraphVerticesPositionalGame (Int, Int) (Maybe Player) ())
+  deriving (ColoredGraphTransformer (Int, Int) (Maybe Player) ())
 
 instance Show Havannah where
   show (Havannah b) = show b
 
 instance PositionalGame Havannah (Int, Int) where
+  positions (Havannah b) = values b
+  getPosition (Havannah b) = coloredGraphGetVertexPosition b
+  setPosition (Havannah b) c p = coloredGraphSetVertexPosition Havannah b c (Just p)
   gameOver (Havannah b) = criterion b
     where
       criterion =
@@ -456,12 +461,15 @@ emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
 -------------------------------------------------------------------------------
 
 newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
-  deriving (ColoredGraphTransformer (Int, Int) (Maybe Player) String, ColoredGraphVerticesPositionalGame (Int, Int) (Maybe Player) String)
+  deriving (ColoredGraphTransformer (Int, Int) (Maybe Player) String)
 
 instance Show Yavalath where
   show (Yavalath b) = show b
 
 instance PositionalGame Yavalath (Int, Int) where
+  positions (Yavalath b) = values b
+  getPosition (Yavalath b) = coloredGraphGetVertexPosition b
+  setPosition (Yavalath b) c p = coloredGraphSetVertexPosition Yavalath b c (Just p)
   gameOver (Yavalath b) = criterion b
     where
       criterion =
@@ -502,9 +510,10 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) String MNKGame where
   toColoredGraph (MNKGame n b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
 
-instance ColoredGraphVerticesPositionalGame (Int, Int) (Maybe Player) String MNKGame
-
 instance PositionalGame MNKGame (Int, Int) where
+  positions (MNKGame _ b) = values b
+  getPosition (MNKGame _ b) = coloredGraphGetVertexPosition b
+  setPosition (MNKGame n b) c p = coloredGraphSetVertexPosition (MNKGame n) b c (Just p)
   gameOver (MNKGame k b) = criterion b
     where
       criterion =

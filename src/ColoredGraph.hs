@@ -5,8 +5,6 @@
 module ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
-  , ColoredGraphVerticesPositionalGame
-  , ColoredGraphEdgesPositionalGame
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -294,15 +292,6 @@ instance ColoredGraphTransformer i a b (ColoredGraph i a b) where
   toColoredGraph c = c
   fromColoredGraph _ = id
 
--- | A class for games based on 'ColoredGraph's that allows them to use default
---   implementations of functions in 'MyLib.PositionalGame'. Game of the class
---   are played on the vertices of of the graph.
-class (ColoredGraphTransformer i a b g) => ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
-
--- | A class for games based on 'ColoredGraph's that allows them to use default
---   implementations of functions in 'MyLib.PositionalGame'. Game of the class
---   are played on the edges of of the graph.
-class (ColoredGraphTransformer i a b g) => ColoredGraphEdgesPositionalGame i a b g | g -> i, g -> a, g -> b where
 
 
 
