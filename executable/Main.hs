@@ -3,6 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -243,6 +244,15 @@ data ShannonSwitchingGameCG = ShannonSwitchingGameCG {
   }
   deriving (Show)
 
+#if WASM
+instance ToJSON ShannonSwitchingGameCG where
+  toJSON ShannonSwitchingGameCG{ start, goal, graph } =
+    object [
+        "start" .= start
+      , "goal" .= goal
+      , "graph" .= graph
+      ]
+#endif
 instance ColoredGraphTransformer Int () (Maybe Player) ShannonSwitchingGameCG where
   toColoredGraph = graph
   fromColoredGraph ssg graph = ssg{ graph }
@@ -552,7 +562,7 @@ emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
 
 #ifdef WASM
 main :: IO ()
-main = webDefaultMain $ emptyHex 5
+main = webDefaultMain wikipediaReplica
 #else
 main :: IO ()
 main = do
