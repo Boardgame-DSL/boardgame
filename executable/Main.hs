@@ -242,10 +242,14 @@ data ShannonSwitchingGameCG = ShannonSwitchingGameCG {
   }
   deriving (Show)
 
+instance ColoredGraphTransformer Int () (Maybe Player) ShannonSwitchingGameCG where
+  toColoredGraph = graph
+  fromColoredGraph ssg graph = ssg{ graph }
+
 instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
-  positions ShannonSwitchingGameCG{ graph } = coloredGraphEdgePositions graph
-  getPosition ShannonSwitchingGameCG{ graph } = coloredGraphGetEdgePosition graph
-  setPosition ssg@ShannonSwitchingGameCG{ graph } c p = (\g -> ssg{ graph = g }) <$> coloredGraphSetBidirectedEdgePosition graph c (Just p)
+  positions = coloredGraphEdgePositions
+  getPosition = coloredGraphGetEdgePosition
+  setPosition ssg c p = coloredGraphSetBidirectedEdgePosition ssg c (Just p)
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
       ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
     where
@@ -404,8 +408,8 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) (Int, Int) Hex where
 
 instance PositionalGame Hex (Int, Int) where
   positions (Hex _ b) = values b
-  getPosition (Hex _ b) = coloredGraphGetVertexPosition b
-  setPosition (Hex n b) c p = Hex n <$> coloredGraphSetVertexPosition b c (Just p)
+  getPosition = coloredGraphGetVertexPosition
+  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (Hex n b) = criterion b
     where
       criterion =
@@ -432,8 +436,8 @@ instance Show Havannah where
 
 instance PositionalGame Havannah (Int, Int) where
   positions (Havannah b) = values b
-  getPosition (Havannah b) = coloredGraphGetVertexPosition b
-  setPosition (Havannah b) c p = Havannah <$> coloredGraphSetVertexPosition b c (Just p)
+  getPosition = coloredGraphGetVertexPosition
+  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (Havannah b) = criterion b
     where
       criterion =
@@ -468,8 +472,8 @@ instance Show Yavalath where
 
 instance PositionalGame Yavalath (Int, Int) where
   positions (Yavalath b) = values b
-  getPosition (Yavalath b) = coloredGraphGetVertexPosition b
-  setPosition (Yavalath b) c p = Yavalath <$> coloredGraphSetVertexPosition b c (Just p)
+  getPosition = coloredGraphGetVertexPosition
+  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (Yavalath b) = criterion b
     where
       criterion =
@@ -512,8 +516,8 @@ instance ColoredGraphTransformer (Int, Int) (Maybe Player) String MNKGame where
 
 instance PositionalGame MNKGame (Int, Int) where
   positions (MNKGame _ b) = values b
-  getPosition (MNKGame _ b) = coloredGraphGetVertexPosition b
-  setPosition (MNKGame n b) c p = MNKGame n <$> coloredGraphSetVertexPosition b c (Just p)
+  getPosition = coloredGraphGetVertexPosition
+  setPosition g c p = coloredGraphSetVertexPosition g c (Just p)
   gameOver (MNKGame k b) = criterion b
     where
       criterion =

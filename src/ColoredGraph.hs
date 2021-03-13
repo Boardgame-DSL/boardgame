@@ -238,37 +238,41 @@ inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphGetVertexPosition :: Ord i => ColoredGraph i a b -> i -> Maybe a
-coloredGraphGetVertexPosition c i = fst <$> Map.lookup i c
+coloredGraphGetVertexPosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> i -> Maybe a
+coloredGraphGetVertexPosition g i = fst <$> Map.lookup i (toColoredGraph g)
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetVertexPosition :: Ord i => ColoredGraph i a b -> i -> a -> Maybe (ColoredGraph i a b)
-coloredGraphSetVertexPosition c i p = if Map.member i c
-    then Just $ Map.adjust (\(_, xs) -> (p, xs)) i c
+coloredGraphSetVertexPosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> i -> a -> Maybe g
+coloredGraphSetVertexPosition g i p = if Map.member i c
+    then Just $ fromColoredGraph g $ Map.adjust (\(_, xs) -> (p, xs)) i c
     else Nothing
+  where
+    c = toColoredGraph g
 
 -- | A standard implementation of 'MyLib.positions' for games
 --   with an underlying 'ColoredGraph' played on the edges.
-coloredGraphEdgePositions :: Ord i => ColoredGraph i a b -> [b]
-coloredGraphEdgePositions c = Map.elems c >>= (Map.elems . snd)
+coloredGraphEdgePositions :: (ColoredGraphTransformer i a b g, Ord i) => g -> [b]
+coloredGraphEdgePositions g = Map.elems (toColoredGraph g) >>= (Map.elems . snd)
 
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the edges.
-coloredGraphGetEdgePosition :: Ord i => ColoredGraph i a b -> (i, i) -> Maybe b
-coloredGraphGetEdgePosition c (from, to) = Map.lookup from c >>= (Map.lookup to . snd)
+coloredGraphGetEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> Maybe b
+coloredGraphGetEdgePosition g (from, to) = Map.lookup from (toColoredGraph g) >>= (Map.lookup to . snd)
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetEdgePosition :: Ord i => ColoredGraph i a b -> (i, i) -> b -> Maybe (ColoredGraph i a b)
-coloredGraphSetEdgePosition c (from, to) p = Map.lookup from c >>=
-  \(a, edges) -> if Map.member to edges
-    then Just $ Map.insert from (a, Map.insert to p edges) c
-    else Nothing
+coloredGraphSetEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> b -> Maybe g
+coloredGraphSetEdgePosition g (from, to) p = Map.lookup from c >>=
+    \(a, edges) -> if Map.member to edges
+      then Just $ fromColoredGraph g $ Map.insert from (a, Map.insert to p edges) c
+      else Nothing
+  where
+    c = toColoredGraph g
 
 -- | Like 'coloredGraphSetEdgePosition' but sets the value to the edges in both
 --   directions.
-coloredGraphSetBidirectedEdgePosition :: Ord i => ColoredGraph i a b -> (i, i) -> b -> Maybe (ColoredGraph i a b)
+coloredGraphSetBidirectedEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> b -> Maybe g
 coloredGraphSetBidirectedEdgePosition c (from, to) p = coloredGraphSetEdgePosition c (from, to) p >>=
   \c' -> coloredGraphSetEdgePosition c' (to, from) p
 
