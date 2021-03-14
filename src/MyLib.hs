@@ -123,14 +123,13 @@ patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomoge
 --   sets. Player2 wins if Player1 cannot win.
 makerBreakerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
 makerBreakerGameOver patterns a
-  | player1won = Just (Just Player1)
-  | player2won = Just (Just Player2)
-  | boardisfull = Just (Just Player2)
+  | player1won = Just $ Just Player1
+  | player2won = Just $ Just Player2
   | otherwise = Nothing
   where
-    player1won = any (all ((== Just Player1) . fromJust . getPosition a)) patterns
-    player2won = all (any ((== Just Player2) . fromJust . getPosition a)) patterns
-    boardisfull = all isJust $ positions a
+    player1won = any (all $ (== Just Player1) . fromJust . getPosition a) patterns
+    player2won = all (any $ (== Just Player2) . fromJust . getPosition a) patterns
+
 -- | The skeleton code for "playing" any 'PositionalGame'. When given a set of
 --   function for communicating the state of the game and moves, a starting
 --   state can be applied to play the game.
