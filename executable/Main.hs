@@ -29,7 +29,7 @@ import Data.Map (
   , (!)
   , adjust
   )
-import Data.Maybe (fromJust, isJust, fromMaybe)
+import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
 import MyLib (
     Player(..)
   , PositionalGame(..)
@@ -44,6 +44,7 @@ import MyLib (
   , symmetric
   , player1LosesIf
   , unless
+  , makerBreakerGameOver
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -74,7 +75,15 @@ import ColoredGraph (
   , hexHexGraph
   , mapEdges
   , rectOctGraph
-  , inARow)
+  , inARow
+  , completeGraph
+  , filterEdges
+  , triHexGraph
+  , winningSetPaths
+  )
+import Data.Bifunctor (bimap)
+import Control.Monad (forM, forM_)
+import Data.Tree (Tree, foldTree)
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------
@@ -298,9 +307,6 @@ instance PositionalGame Gale (Integer, Integer) where
 -- * Hex
 -------------------------------------------------------------------------------
 
-hexSize :: Int
-hexSize = 5
-
 data Hex = Hex Int (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
 
 emptyHex :: Int -> Hex
@@ -308,11 +314,11 @@ emptyHex n = Hex n $ paraHexGraph n
 
 instance Show Hex where
   show (Hex n b) =
-    replicate (2*(hexSize-1)) ' ' ++ concat (replicate hexSize "  _ ") ++ "\n"
+    replicate (2*(n-1)) ' ' ++ concat (replicate n "  _ ") ++ "\n"
     ++
-    intercalate "\n" [intercalate "\n" (gridShowLine (Hex n b) r) | r <- [0..hexSize-1]]
+    intercalate "\n" [intercalate "\n" (gridShowLine (Hex n b) r) | r <- [0..n-1]]
     ++
-    "\n" ++ concat (replicate hexSize " \\_/")
+    "\n" ++ concat (replicate n " \\_/")
 
 #ifdef WASM
 instance ToJSON Hex where
@@ -321,13 +327,13 @@ instance ToJSON Hex where
 
 gridShowLine :: Hex -> Int -> [String]
 gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
-                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, hexSize-1-y) b) [0..(hexSize-1)]) ++ " |"
+                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, n-1-y) b) [0..(n-1)]) ++ " |"
                           ] where
   showP (Just Player1) = "1"
   showP (Just Player2) = "2"
   showP Nothing = " "
-  rowOffset = replicate (2*(hexSize-y-1)) ' '
-  tileTop = concat $ replicate hexSize " / \\"
+  rowOffset = replicate (2*(n-y-1)) ' '
+  tileTop = concat $ replicate n " / \\"
 
 instance ColoredGraphVerticesPositionalGame (Int, Int) Player (Int, Int) Hex where
   toColoredGraph (Hex n b) = b
@@ -347,6 +353,48 @@ instance PositionalGame Hex (Int, Int) where
       right  = [(n-1,i) | i <- [0..n-1]]
       top    = [(i,  0) | i <- [0..n-1]]
       bottom = [(i,n-1) | i <- [0..n-1]]
+
+-------------------------------------------------------------------------------
+-- * Hex2
+-------------------------------------------------------------------------------
+
+data Hex2 = Hex2 Int (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
+
+emptyHex2 :: Int -> Hex2
+emptyHex2 n = Hex2 n $ paraHexGraph n
+
+instance Show Hex2 where
+  show (Hex2 n b) =
+    replicate (2*(n-1)) ' ' ++ concat (replicate n "  _ ") ++ "\n"
+    ++
+    intercalate "\n" [intercalate "\n" (gridShowLine2 (Hex2 n b) r) | r <- [0..n-1]]
+    ++
+    "\n" ++ concat (replicate n " \\_/")
+
+gridShowLine2 :: Hex2 -> Int -> [String]
+gridShowLine2 (Hex2 n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
+                          ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, n-1-y) b) [0..(n-1)]) ++ " |"
+                          ] where
+  showP (Just Player1) = "1"
+  showP (Just Player2) = "2"
+  showP Nothing = " "
+  rowOffset = replicate (2*(n-y-1)) ' '
+  tileTop = concat $ replicate n " / \\"
+
+instance PositionalGame Hex2 (Int, Int) where
+  getPosition (Hex2 n b) c = fst <$> lookup c b
+  positions (Hex2 n b) = values b
+  setPosition (Hex2 n b) c p = if member c b
+    then Just $ Hex2 n $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+  gameOver (Hex2 n b) = makerBreakerGameOver (allWinningHexPaths n) (Hex2 n b)
+
+allWinningHexPaths :: Int -> [[(Int, Int)]]
+allWinningHexPaths n = winningSetPaths (paraHexGraph n) left right
+  where
+    left   = [(0,  i) | i <- [0..n-1]]
+    right  = [(n-1,i) | i <- [0..n-1]]
 
 -------------------------------------------------------------------------------
 -- * Havannah
@@ -461,6 +509,104 @@ emptyMNKGame m n k = MNKGame k $ mapEdges dirName $ rectOctGraph m n
     dirName (-1,-1) = "diagonal2"
 
 -------------------------------------------------------------------------------
+-- * Y
+-------------------------------------------------------------------------------
+
+newtype Y = Y (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
+
+instance Show Y where
+  show (Y b) = show b
+
+instance PositionalGame Y (Int, Int) where
+  getPosition (Y b) c = fst <$> lookup c b
+  positions (Y b) = values b
+  setPosition (Y b) c p = if member c b
+    then Just $ Y $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (Y b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues $ fmap nextPlayer) $
+        player1WinsIf $ anyConnections (==3) [side1, side2, side3] . filterValues (== Just Player1)
+
+      dirs :: [(Int, Int)]
+      dirs =
+        [ (1, 0)
+        , (1, -1)
+        , (0, -1)
+        , (-1, 0)
+        , (-1, 1)
+        , (0, 1)
+        ]
+      emptyNeighbour x = keys $ filterG (notElem x . elems . snd) b
+
+      side1 = emptyNeighbour $ dirs !! 0
+      side2 = emptyNeighbour $ dirs !! 2
+      side3 = emptyNeighbour $ dirs !! 4
+
+emptyY :: Int -> Y
+emptyY = Y . triHexGraph
+
+-------------------------------------------------------------------------------
+-- * Cross
+-------------------------------------------------------------------------------
+
+newtype Cross = Cross (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
+
+instance Show Cross where
+  show (Cross b) = show b
+
+instance PositionalGame Cross (Int, Int) where
+  getPosition (Cross b) c = fst <$> lookup c b
+  positions (Cross b) = values b
+  setPosition (Cross b) c p = if member c b
+    then Just $ Cross $ adjust (\(_, xs) -> (Just p, xs)) c b
+    else Nothing
+  makeMove = takeEmptyMakeMove
+
+  gameOver (Cross b) = criterion b
+    where
+      criterion =
+        -- Here we say that in any position where one player wins,
+        -- the other player would win instead if the pieces were swapped.
+        symmetric (mapValues (nextPlayer <$>)) $
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
+        criteria (player1LosesIf <$> -- you lose if you have connected 2 opposite sides.
+          [ anyConnections (==2) [side1, side4] . filterValues (== Just Player1)
+          , anyConnections (==2) [side2, side5] . filterValues (== Just Player1)
+          , anyConnections (==2) [side3, side6] . filterValues (== Just Player1)
+          ]) `unless`
+        criteria (player1WinsIf <$> -- you win if you have connected 3 non-adjacent sides.
+          [ anyConnections (==3) [side1, side3, side5] . filterValues (== Just Player1)
+          , anyConnections (==3) [side2, side4, side6] . filterValues (== Just Player1)
+          ])
+
+      dirs =
+        [ (1, 0)
+        , (1, -1)
+        , (0, -1)
+        , (-1, 0)
+        , (-1, 1)
+        , (0, 1)
+        ]
+      emptyNeighbours xs = keys $ filterG (null . intersect xs . elems . snd) b
+
+      side1 = emptyNeighbours [dirs !! 0, dirs !! 1, dirs !! 2]
+      side2 = emptyNeighbours [dirs !! 1, dirs !! 2, dirs !! 3]
+      side3 = emptyNeighbours [dirs !! 2, dirs !! 3, dirs !! 4]
+      side4 = emptyNeighbours [dirs !! 3, dirs !! 4, dirs !! 5]
+      side5 = emptyNeighbours [dirs !! 4, dirs !! 5, dirs !! 0]
+      side6 = emptyNeighbours [dirs !! 5, dirs !! 0, dirs !! 1]
+
+emptyCross :: Int -> Cross
+emptyCross = Cross . hexHexGraph
+
+
+-------------------------------------------------------------------------------
 -- * CLI interactions
 -------------------------------------------------------------------------------
 
@@ -477,6 +623,10 @@ main = do
   putStrLn "5: Hex"
   putStrLn "6: Havannah"
   putStrLn "7: Yavalath"
+  putStrLn "8: Y"
+  putStrLn "9: Cross"
+  putStrLn "10: Hex (Alternative Version)"
+  putStrLn "11: TicTacToe (Alternative Version)"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -489,7 +639,11 @@ main = do
     4 -> playIO emptyGale
     5 -> playIO $ emptyHex 5
     6 -> playIO $ emptyHavannah 8
-    7 -> playIO $ emptyYavalath 2
+    7 -> playIO $ emptyYavalath 8
+    8 -> playIO $ emptyCross 8
+    9 -> playIO $ emptyCross 8
+    10 -> playIO $ emptyHex2 5
+    11 -> playIO $ emptyMNKGame 3 3 3
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()
