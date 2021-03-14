@@ -76,7 +76,7 @@ import ColoredGraph (
   , mapEdges
   , rectOctGraph
   , inARow
-  , kGraph
+  , completeGraph
   , filterEdges
   , triHexGraph
   , winningSetPaths

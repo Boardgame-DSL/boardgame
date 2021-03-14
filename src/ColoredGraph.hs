@@ -9,7 +9,7 @@ module ColoredGraph (
   , paraHexGraph
   , rectOctGraph
   , triHexGraph
-  , kGraph
+  , completeGraph
   , mapValues
   , mapEdges
   , filterValues
@@ -139,14 +139,21 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..m-1], j <- [0..n-1]]
 
+-- | Creates a triangular shaped graph of hexagon vertices (each vertex has
+--   six outgoing edges) with the given side length.
+--
+--   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' the top
+--   left vertex. The color of edges will also be a '(Int, Int)' tuple that
+--   shows the "direction" of the edge.
 triHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
 triHexGraph n = Map.fromList ((\z -> (z, (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . snd) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 7]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0 .. n -1], j <- [0 .. n -1], i + j >= n]
 
-kGraph :: Int -> ColoredGraph Int () ()
-kGraph n = Map.fromList [ (i, ((), Map.fromList [(j, ()) | j <- [0..n-1], i /= j])) | i <- [0..n-1]]
+-- | Creates a complete graph with n vertices.
+completeGraph :: Int -> ColoredGraph Int () ()
+completeGraph n = Map.fromList [ (i, ((), Map.fromList [(j, ()) | j <- [0..n-1], i /= j])) | i <- [0..n-1]]
 
 
 
@@ -246,7 +253,8 @@ anyConnections pred groups g = any (\z -> pred $ length $ filter (not . Prelude.
 inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
 inARow pred dir = any (pred . length) . components . filterEdges (==dir)
 
--- returns the winning sets representing paths from one set to another on a graph.
+-- | Returns the winning sets representing paths from one set of nodes to
+--   another on a graph.
 winningSetPaths :: Ord i => ColoredGraph i a b -> [i] -> [i] -> [[i]]
 winningSetPaths g is js = concat [foldTree (\(isLeaf, z) xs -> if isLeaf then [[z]] else concatMap (fmap (z:)) xs) $ winningSetPaths' g start i goal | i <- is]
   where
@@ -255,6 +263,18 @@ winningSetPaths g is js = concat [foldTree (\(isLeaf, z) xs -> if isLeaf then [[
 
     allFalse = False <$ g
     goal = foldr (`Map.insert` True) allFalse js
+
+-- | Returns a tree representing all paths from a starting node too any node in
+--   the goal. The paths do not "touch" themselves and they only use a set of
+--   allowed nodes. That they don't touch means that we generate exactly the
+--   minimum set of winning sets that cover reaching from our starting node to
+--   the goal.
+winningSetPaths' :: Ord i => ColoredGraph i a b -> Map i Bool -> i -> Map i Bool -> Tree (Bool, i)
+winningSetPaths' g allowed i goal = Node (False, i) $ (\k -> if fromJust $ Map.lookup k goal then Node (True, k) [] else winningSetPaths' g allowed' k goal) <$> neighbourIndices
+  where
+    neighbourIndices = filter (fromJust . flip Map.lookup allowed) $ Map.keys $ snd $ fromJust $ Map.lookup i g
+    allowed' = foldr (`Map.insert` False) allowed neighbourIndices
+
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
 coloredGraphGetVertexPosition :: Ord i => ColoredGraph i (Maybe a) b -> i -> Maybe (Maybe a)
@@ -280,10 +300,3 @@ class ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
 instance ColoredGraphVerticesPositionalGame i a b (ColoredGraph i (Maybe a) b) where
   toColoredGraph c = c
   fromColoredGraph _ = id
-
-
-winningSetPaths' :: Ord i => ColoredGraph i a b -> Map i Bool -> i -> Map i Bool -> Tree (Bool, i)
-winningSetPaths' g allowed i goal = Node (False, i) $ (\k -> if fromJust $ Map.lookup k goal then Node (True, k) [] else winningSetPaths' g allowed' k goal) <$> neighbourIndices
-  where
-    neighbourIndices = filter (fromJust . flip Map.lookup allowed) $ Map.keys $ snd $ fromJust $ Map.lookup i g
-    allowed' = foldr (`Map.insert` False) allowed neighbourIndices
