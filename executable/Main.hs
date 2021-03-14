@@ -33,6 +33,8 @@ import Data.Maybe (fromJust, isJust, fromMaybe)
 import MyLib (
     Player(..)
   , PositionalGame(..)
+  , ClientOption
+  , waiterClientPositionalGame
   , patternMatchingGameOver
   , playIO
   , takeEmptyMakeMove
@@ -477,6 +479,7 @@ main = do
   putStrLn "5: Hex"
   putStrLn "6: Havannah"
   putStrLn "7: Yavalath"
+  putStrLn "8: TicTacToe (Waiter-Client)"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -490,6 +493,7 @@ main = do
     5 -> playIO $ emptyHex 5
     6 -> playIO $ emptyHavannah 8
     7 -> playIO $ emptyYavalath 2
+    8 -> playIO $ waiterClientPositionalGame emptyTicTacToe
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()

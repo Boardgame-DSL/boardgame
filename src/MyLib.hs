@@ -3,10 +3,13 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module MyLib (
     Player(..)
   , PositionalGame(..)
+  , ClientOption
+  , waiterClientPositionalGame
   , nextPlayer
   , play
   , playerToInt
@@ -182,6 +185,40 @@ instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPos
   getPosition (CombinedPositionalGames x y) = undefined
   setPosition (CombinedPositionalGames x y) = undefined
 
+-- | A client in a Waiter-Client game can choose the 'First' or the 'Second'
+--   option presented by the Waiter.
+data ClientOption
+  = First
+  | Second
+  deriving (Show, Read)
+
+data (PositionalGame a c) => WaiterClientPositionalGame a c
+  = WaiterPositionalGame a
+  | ClientPositionalGame a (c, c)
+
+-- | Takes a positional game, and returns it with waiter client rules.
+waiterClientPositionalGame :: (PositionalGame a c) => a -> WaiterClientPositionalGame a c
+waiterClientPositionalGame = WaiterPositionalGame
+
+instance PositionalGame a c => PositionalGame (WaiterClientPositionalGame a c) (Either (c, c) ClientOption) where
+  makeMove (WaiterPositionalGame a) Player1 (Left (f, s)) = case (getPosition a f, getPosition a s) of
+    (Just Nothing, Just Nothing) -> Just $ ClientPositionalGame a (f, s)
+    _                            -> Nothing
+  makeMove (ClientPositionalGame a (f, s)) Player2 (Right o) = (case o of
+      First  -> setPosition a f Player2 >>= \a' -> setPosition a' s Player1
+      Second -> setPosition a s Player2 >>= \a' -> setPosition a' f Player1
+    ) >>= Just . WaiterPositionalGame
+  makeMove _ _ _ = Nothing
+  positions (WaiterPositionalGame a) = positions a
+  positions (ClientPositionalGame a _) = positions a
+  getPosition _ _ = Nothing
+  setPosition _ _ _ = Nothing
+  gameOver (WaiterPositionalGame a) = gameOver a
+  gameOver (ClientPositionalGame a o) = Nothing
+
+instance (Show a, Show c, PositionalGame a c) => Show (WaiterClientPositionalGame a c) where
+  show (WaiterPositionalGame a) = show a
+  show (ClientPositionalGame a (f, s)) = show a ++ "\nFirst: " ++ show f ++ "\nSecond: " ++ show s
 
 
 
