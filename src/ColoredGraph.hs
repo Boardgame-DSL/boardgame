@@ -134,7 +134,7 @@ paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i
 --   left vertex. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
 rectOctGraph :: Int -> Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . snd) $ (\i -> (octoNeighbors z !! i, octoDirections !! i)) <$> [0..7]))) <$> nodes)
+rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . fst) $ (\i -> (octoNeighbors z !! i, octoDirections !! i)) <$> [0..7]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..m-1], j <- [0..n-1]]
