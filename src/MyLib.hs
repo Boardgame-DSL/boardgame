@@ -4,6 +4,9 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+#ifdef WASM
+{-# LANGUAGE OverloadedStrings #-}
+#endif
 
 module MyLib (
     Player(..)
@@ -41,8 +44,18 @@ import ColoredGraph (
   , coloredGraphSetVertexPosition
   )
 #ifdef WASM
-import Data.Aeson (ToJSON(toJSON), Value(Number))
-import Data.Scientific (fromFloatDigits)
+import Data.Aeson (
+    ToJSON(toJSON)
+  , FromJSON(parseJSON)
+  , Value(Number)
+  , (.=)
+  , object
+  )
+import Data.Aeson.Types (typeMismatch)
+import Data.Scientific (
+    fromFloatDigits
+  , toBoundedInteger
+  )
 #endif
 
 -- | Represents one of the two players.
@@ -192,9 +205,31 @@ data ClientOption
   | Second
   deriving (Show, Read)
 
+#ifdef WASM
+instance FromJSON ClientOption where
+  parseJSON (Number n) = case (toBoundedInteger n :: Maybe Int) of
+    Just 0 -> return First
+    Just 1 -> return Second
+    _      -> fail "Out of bounds"
+  parseJSON v = typeMismatch "ClientOption" v
+#endif
+
 data (PositionalGame a c) => WaiterClientPositionalGame a c
   = WaiterPositionalGame a
   | ClientPositionalGame a (c, c)
+
+#ifdef WASM
+instance (ToJSON a, ToJSON c, PositionalGame a c) => ToJSON (WaiterClientPositionalGame a c) where
+  toJSON (WaiterPositionalGame a) = object [
+      "state" .= (0 :: Int)
+    , "game" .= a
+    ]
+  toJSON (ClientPositionalGame a os) = object [
+      "state" .= (1 :: Int)
+    , "game" .= a
+    , "options" .= os
+    ]
+#endif
 
 -- | Takes a positional game, and returns it with waiter client rules.
 waiterClientPositionalGame :: (PositionalGame a c) => a -> WaiterClientPositionalGame a c
