@@ -286,9 +286,9 @@ instance PositionalGame Gale (Integer, Integer) where
   setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c (Just p) b else Nothing
     where c = (x `div` 2, y)
   gameOver (Gale b)
-    | all isJust (elems b) = Just Nothing
     | path player1Graph (-1) (-2) = Just $ Just Player1
     | path player2Graph (-1) (-2) = Just $ Just Player2
+    | all isJust (elems b) = Just Nothing
     | otherwise            = Nothing
     where
       playerGraph from to p = buildG (-2, 19) $
@@ -410,18 +410,18 @@ instance PositionalGame Havannah (Int, Int) where
   gameOver (Havannah b) = criterion b
     where
       criterion =
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
-        symmetric (mapValues (nextPlayer <$>)) $
-        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
-        criteria (player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
+        symmetric (mapValues (nextPlayer <$>))
+        (criteria (player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
             -- Player1 has connected 2 corners.
           [ anyConnections (>=2) corners . filterValues (== Just Player1)
             -- player1 has connecteed 3 edges (excluding the corners).
           , anyConnections (>=3) edges . filterValues (== Just Player1)
             -- player1 has surrounded other tiles such that they can't reach the border.
           , anyConnections (==0) border . filterValues (/= Just Player1)
-          ])
+          ]))
       corners = components $ filterG ((==3) . length . snd) b
       edges   = components $ filterG ((==4) . length . snd) b
       border = corners ++ edges
@@ -443,15 +443,15 @@ instance PositionalGame Yavalath (Int, Int) where
   gameOver (Yavalath b) = criterion b
     where
       criterion =
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
-        symmetric (mapValues $ fmap nextPlayer) $
-        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
+        symmetric (mapValues $ fmap nextPlayer)
         -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
         -- It's important we use `unless` here because otherwise we could have conflicting
         -- outcomes from having both 3 in a row and 4 in a row at the same time.
-        criteria (player1LosesIf . inARow (==3) <$> directions) . filterValues (== Just Player1) `unless`
-        criteria (player1WinsIf . inARow (>=4) <$> directions) . filterValues (== Just Player1)
+        (criteria (player1LosesIf . inARow (==3) <$> directions) . filterValues (== Just Player1) `unless`
+        criteria (player1WinsIf . inARow (>=4) <$> directions) . filterValues (== Just Player1))
 
       directions = ["vertical", "diagonal1", "diagonal2"]
 
@@ -484,10 +484,10 @@ instance PositionalGame MNKGame (Int, Int) where
   gameOver (MNKGame k b) = criterion b
     where
       criterion =
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
-        symmetric (mapValues $ fmap nextPlayer) $
-        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
+        symmetric (mapValues $ fmap nextPlayer)
         -- Player1 wins if there are k or more pieces in a row in any direction.
         (criteria (player1WinsIf . inARow (>=k) <$> directions) . filterValues (== Just Player1))
           
@@ -571,11 +571,11 @@ instance PositionalGame Cross (Int, Int) where
   gameOver (Cross b) = criterion b
     where
       criterion =
+        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
-        symmetric (mapValues (nextPlayer <$>)) $
-        drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
-        criteria (player1LosesIf <$> -- you lose if you have connected 2 opposite sides.
+        symmetric (mapValues (nextPlayer <$>))
+        (criteria (player1LosesIf <$> -- you lose if you have connected 2 opposite sides.
           [ anyConnections (==2) [side1, side4] . filterValues (== Just Player1)
           , anyConnections (==2) [side2, side5] . filterValues (== Just Player1)
           , anyConnections (==2) [side3, side6] . filterValues (== Just Player1)
@@ -583,7 +583,7 @@ instance PositionalGame Cross (Int, Int) where
         criteria (player1WinsIf <$> -- you win if you have connected 3 non-adjacent sides.
           [ anyConnections (==3) [side1, side3, side5] . filterValues (== Just Player1)
           , anyConnections (==3) [side2, side4, side6] . filterValues (== Just Player1)
-          ])
+          ]))
 
       dirs =
         [ (1, 0)
