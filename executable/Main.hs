@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Main where
 
@@ -28,6 +29,8 @@ import Data.Map (
   , member
   , (!)
   , adjust
+  , alter
+  , empty
   )
 import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
 import MyLib (
@@ -38,6 +41,7 @@ import MyLib (
   , takeEmptyMakeMove
   , nextPlayer
   , drawIf
+  , ifNotThen
   , player1WinsIf
   , player2WinsIf
   , criteria
@@ -52,6 +56,7 @@ import Control.Applicative ((<|>))
 import Data.Tuple (swap)
 import qualified Data.Array ((!))
 import Data.Foldable (toList)
+import Data.Bifunctor (Bifunctor(second))
 
 #ifdef WASM
 import qualified Data.Vector as V ((!), fromList)
@@ -64,12 +69,13 @@ import Math.Geometry.Grid as Grid ()
 import Math.Geometry.Grid.Hexagonal ()
 import ColoredGraph (
     ColoredGraph
-  , ColoredGraphVerticesPositionalGame(..)
+  , ColoredGraphTransformer(..)
   , paraHexGraph
   , values
   , anyConnections
   , mapValues
   , filterValues
+  , filterEdges
   , filterG
   , components
   , hexHexGraph
@@ -80,6 +86,12 @@ import ColoredGraph (
   , filterEdges
   , triHexGraph
   , winningSetPaths
+  , coloredGraphVertexPositions
+  , coloredGraphGetVertexPosition
+  , coloredGraphSetVertexPosition
+  , coloredGraphEdgePositions
+  , coloredGraphGetEdgePosition
+  , coloredGraphSetBidirectedEdgePosition
   )
 import Data.Bifunctor (bimap)
 import Control.Monad (forM, forM_)
@@ -136,7 +148,7 @@ instance PositionalGame TicTacToe (Integer, Integer) where
   -- Just returns the elements in the underlying Map
   positions (TicTacToe b) = elems b
   -- If the underlying Map has the given coordinate, update it with the given player
-  setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c (Just p) b else Nothing
+  setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c p b else Nothing
   -- "Creates" a `gameOver` function by supplying all the winning "patterns"
   gameOver = patternMatchingGameOver [
       [(0, 0), (0, 1), (0, 2)]
@@ -173,7 +185,7 @@ instance PositionalGame ArithmeticProgressionGame Int where
   getPosition (ArithmeticProgressionGame _ l) i = if i <= length l then Just $ l !! (i - 1) else Nothing
   positions (ArithmeticProgressionGame _ l) = l
   setPosition (ArithmeticProgressionGame k l) i p = if i <= length l
-    then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ Just p : drop i l)
+    then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ p : drop i l)
     else Nothing
   gameOver a@(ArithmeticProgressionGame k l) = let n = length l
     in patternMatchingGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a
@@ -216,7 +228,7 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
   getPosition (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
   positions (ShannonSwitchingGame (_, l)) = map snd l
   setPosition (ShannonSwitchingGame (n, l)) c p = case findIndex ((== c) . fst) l of
-    Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, Just p) : drop (i + 1) l)
+    Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, p) : drop (i + 1) l)
     Nothing -> Nothing
   gameOver (ShannonSwitchingGame (n, l))
     | path g 0 (n * n - 1) = Just (Just Player1)
@@ -225,6 +237,67 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
     | otherwise = Nothing
     where
       g = buildG (0, n * n - 1) (map fst $ filter ((== Just Player1) . snd) l)
+
+-------------------------------------------------------------------------------
+-- * Shannon Switching Game (On a ColoredGraph)
+-------------------------------------------------------------------------------
+
+-- Operates under the invariant that all edges in 'graph' are bi-directional
+-- and their values are in sync.
+data ShannonSwitchingGameCG = ShannonSwitchingGameCG {
+    start :: Int
+  , goal  :: Int
+  , graph :: ColoredGraph Int () (Maybe Player)
+  }
+  deriving (Show)
+
+instance ColoredGraphTransformer Int () (Maybe Player) ShannonSwitchingGameCG where
+  toColoredGraph = graph
+  fromColoredGraph ssg graph = ssg{ graph }
+
+instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
+  positions = coloredGraphEdgePositions
+  getPosition = coloredGraphGetEdgePosition
+  setPosition = coloredGraphSetBidirectedEdgePosition
+  gameOver ShannonSwitchingGameCG{ start, goal, graph } =
+      ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
+    where
+      winPath = anyConnections (==2) [[start], [goal]] . filterEdges (== Just Player1)
+      losePath = not . anyConnections (==2) [[start], [goal]] . filterEdges (/= Just Player2)
+
+createEmptyShannonSwitchingGameCG :: [(Int, Int)] -> Int -> Int -> ShannonSwitchingGameCG
+createEmptyShannonSwitchingGameCG pairs start goal = ShannonSwitchingGameCG{
+      start
+    , goal
+    , graph = foldl addPathToMap empty $ pairs >>= (\(from, to) -> [(from, to), (to, from)])
+  }
+  where
+    addPathToMap m (from, to) = alter updateOrInsert from m
+      where
+        updateOrInsert existing = case existing of
+          Just (a, edges) -> Just (a, insert to Nothing edges)
+          Nothing -> Just ((), fromList [(to, Nothing)])
+
+-- Creates a 'ShannonSwitchingGameCG' on a graph like the one from Wikipedia.
+-- https://en.wikipedia.org/wiki/Shannon_switching_game#/media/File:Shannon_game_graph.svg
+wikipediaReplica :: ShannonSwitchingGameCG
+wikipediaReplica = createEmptyShannonSwitchingGameCG connections 0 3
+  where
+    connections = [
+        (0, 1)
+      , (0, 4)
+      , (0, 7)
+      , (1, 2)
+      , (1, 5)
+      , (2, 3)
+      , (4, 5)
+      , (4, 6)
+      , (4, 7)
+      , (5, 3)
+      , (5, 6)
+      , (6, 3)
+      , (7, 6)
+      ]
 
 -------------------------------------------------------------------------------
 -- * Gale
@@ -283,7 +356,7 @@ instance PositionalGame Gale (Integer, Integer) where
   getPosition (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing
     where c = (x `div` 2, y)
   positions (Gale b) = elems b
-  setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c (Just p) b else Nothing
+  setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c p b else Nothing
     where c = (x `div` 2, y)
   gameOver (Gale b)
     | all isJust (elems b) = Just Nothing
@@ -335,11 +408,14 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   rowOffset = replicate (2*(n-y-1)) ' '
   tileTop = concat $ replicate n " / \\"
 
-instance ColoredGraphVerticesPositionalGame (Int, Int) Player (Int, Int) Hex where
+instance ColoredGraphTransformer (Int, Int) (Maybe Player) (Int, Int) Hex where
   toColoredGraph (Hex n b) = b
   fromColoredGraph (Hex n _) = Hex n
 
 instance PositionalGame Hex (Int, Int) where
+  positions = coloredGraphVertexPositions
+  getPosition = coloredGraphGetVertexPosition
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Hex n b) = criterion b
     where
       criterion =
@@ -385,7 +461,7 @@ instance PositionalGame Hex2 (Int, Int) where
   getPosition (Hex2 n b) c = fst <$> lookup c b
   positions (Hex2 n b) = values b
   setPosition (Hex2 n b) c p = if member c b
-    then Just $ Hex2 n $ adjust (\(_, xs) -> (Just p, xs)) c b
+    then Just $ Hex2 n $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing
   makeMove = takeEmptyMakeMove
   gameOver (Hex2 n b) = makerBreakerGameOver (allWinningHexPaths n) (Hex2 n b)
@@ -401,12 +477,15 @@ allWinningHexPaths n = winningSetPaths (paraHexGraph n) left right
 -------------------------------------------------------------------------------
 
 newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
-  deriving (ColoredGraphVerticesPositionalGame (Int, Int) Player ())
+  deriving (ColoredGraphTransformer (Int, Int) (Maybe Player) ())
 
 instance Show Havannah where
   show (Havannah b) = show b
 
 instance PositionalGame Havannah (Int, Int) where
+  positions = coloredGraphVertexPositions
+  getPosition = coloredGraphGetVertexPosition
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Havannah b) = criterion b
     where
       criterion =
@@ -434,12 +513,15 @@ emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
 -------------------------------------------------------------------------------
 
 newtype Yavalath = Yavalath (ColoredGraph (Int, Int) (Maybe Player) String)
-  deriving (ColoredGraphVerticesPositionalGame (Int, Int) Player String)
+  deriving (ColoredGraphTransformer (Int, Int) (Maybe Player) String)
 
 instance Show Yavalath where
   show (Yavalath b) = show b
 
 instance PositionalGame Yavalath (Int, Int) where
+  positions = coloredGraphVertexPositions
+  getPosition = coloredGraphGetVertexPosition
+  setPosition = coloredGraphSetVertexPosition
   gameOver (Yavalath b) = criterion b
     where
       criterion =
@@ -481,11 +563,14 @@ instance ToJSON MNKGame where
   toJSON (MNKGame _ b) = toJSON b
 #endif
 
-instance ColoredGraphVerticesPositionalGame (Int, Int) Player String MNKGame where
+instance ColoredGraphTransformer (Int, Int) (Maybe Player) String MNKGame where
   toColoredGraph (MNKGame n b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
 
 instance PositionalGame MNKGame (Int, Int) where
+  positions = coloredGraphVertexPositions
+  getPosition = coloredGraphGetVertexPosition
+  setPosition = coloredGraphSetVertexPosition
   gameOver (MNKGame k b) = criterion b
     where
       criterion =
@@ -526,7 +611,7 @@ instance PositionalGame Y (Int, Int) where
   getPosition (Y b) c = fst <$> lookup c b
   positions (Y b) = values b
   setPosition (Y b) c p = if member c b
-    then Just $ Y $ adjust (\(_, xs) -> (Just p, xs)) c b
+    then Just $ Y $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing
   makeMove = takeEmptyMakeMove
 
@@ -569,7 +654,7 @@ instance PositionalGame Cross (Int, Int) where
   getPosition (Cross b) c = fst <$> lookup c b
   positions (Cross b) = values b
   setPosition (Cross b) c p = if member c b
-    then Just $ Cross $ adjust (\(_, xs) -> (Just p, xs)) c b
+    then Just $ Cross $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing
   makeMove = takeEmptyMakeMove
 
@@ -623,7 +708,7 @@ instance PositionalGame ConnectFour (Int, Int) where
   getPosition (ConnectFour k b) c = fst <$> lookup c b
   positions   (ConnectFour k b) = values b
   setPosition (ConnectFour k b) c p = if member c b
-    then Just $ ConnectFour k $ adjust (\(_, xs) -> (Just p, xs)) c b
+    then Just $ ConnectFour k $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing
   makeMove = newMakeMove
 
@@ -647,11 +732,11 @@ newMakeMove :: ConnectFour -> Player -> (Int, Int) -> Maybe ConnectFour
 newMakeMove a p coord = case getPosition a coord of
   -- If we are at bottom row, we can place the piece there.
   Just Nothing -> if ((fst coord) == 0) 
-                    then setPosition a coord p
+                    then setPosition a coord (Just p)
                     -- Not at bottom row, check to see if position below has been filled.
                     else case getPosition a ((fst coord) -1, snd coord) of
                       Just Nothing -> Nothing
-                      _            -> setPosition a coord  p
+                      _            -> setPosition a coord (Just p)
   _            -> Nothing
 
 emptyConnectFour :: Int -> Int -> Int -> ConnectFour
@@ -691,6 +776,7 @@ main = do
   putStrLn "10: Hex (Alternative Version)"
   putStrLn "11: TicTacToe (Alternative Version)"
   putStrLn "12: Connect Four"
+  putStrLn "13: Shannon Switching Game (On a ColoredGraph)"
   putStr "What do you want to play? "
   hFlush stdout
   choice <- read <$> getLine
@@ -709,6 +795,7 @@ main = do
     10 -> playIO $ emptyHex2 5
     11 -> playIO $ emptyMNKGame 3 3 3
     12 -> playIO $ emptyConnectFour 6 7 4
+    13 -> playIO wikipediaReplica
     _ -> putStrLn "Invalid choice!"
 
 playAPG :: IO ()

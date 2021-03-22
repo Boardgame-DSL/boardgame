@@ -4,7 +4,7 @@
 
 module ColoredGraph (
     ColoredGraph
-  , ColoredGraphVerticesPositionalGame(..)
+  , ColoredGraphTransformer(..)
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -21,8 +21,13 @@ module ColoredGraph (
   , values
   , winningSetPaths
   , winningSetPaths'
+  , coloredGraphVertexPositions
   , coloredGraphSetVertexPosition
   , coloredGraphGetVertexPosition
+  , coloredGraphEdgePositions
+  , coloredGraphGetEdgePosition
+  , coloredGraphSetEdgePosition
+  , coloredGraphSetBidirectedEdgePosition
 ) where
 
 import Data.Map (Map)
@@ -32,6 +37,7 @@ import qualified Data.Set as Set
 import Data.List ( find, intersect, (\\) )
 import Data.Maybe ( fromJust, isJust, listToMaybe, mapMaybe )
 import Data.Tree (Tree(..), foldTree)
+import Control.Monad ((<=<))
 import Data.Bifunctor ( bimap, Bifunctor (first, second) )
 
 
@@ -275,28 +281,63 @@ winningSetPaths' g allowed i goal = Node (False, i) $ (\k -> if fromJust $ Map.l
     neighbourIndices = filter (fromJust . flip Map.lookup allowed) $ Map.keys $ snd $ fromJust $ Map.lookup i g
     allowed' = foldr (`Map.insert` False) allowed neighbourIndices
 
+-- | A standard implementation of 'MyLib.positions' for games
+--   with an underlying 'ColoredGraph' played on the vertices.
+--
+--   For 'ColoredGraph's, this is a synonym of 'values'.
+coloredGraphVertexPositions :: (ColoredGraphTransformer i a b g, Ord i) => g -> [a]
+coloredGraphVertexPositions = values . toColoredGraph
+
 -- | A standard implementation of 'MyLib.getPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphGetVertexPosition :: Ord i => ColoredGraph i (Maybe a) b -> i -> Maybe (Maybe a)
-coloredGraphGetVertexPosition c i = fst <$> Map.lookup i c
+coloredGraphGetVertexPosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> i -> Maybe a
+coloredGraphGetVertexPosition g i = fst <$> Map.lookup i (toColoredGraph g)
 
 -- | A standard implementation of 'MyLib.setPosition' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
-coloredGraphSetVertexPosition :: Ord i => (ColoredGraph i (Maybe a) b -> c) -> ColoredGraph i (Maybe a) b -> i -> a -> Maybe c
-coloredGraphSetVertexPosition constructor c i p = if Map.member i c
-    then Just $ constructor $ Map.adjust (\(_, xs) -> (Just p, xs)) i c
+coloredGraphSetVertexPosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> i -> a -> Maybe g
+coloredGraphSetVertexPosition g i p = if Map.member i c
+    then Just $ fromColoredGraph g $ Map.adjust (\(_, xs) -> (p, xs)) i c
     else Nothing
+  where
+    c = toColoredGraph g
 
--- | A class for games based on 'ColoredGraph's that allows them to use default
---   implementations of functions in 'MyLib.PositionalGame'. Game of the class
---   are played on the vertices of of the graph.
+-- | A standard implementation of 'MyLib.positions' for games
+--   with an underlying 'ColoredGraph' played on the edges.
+coloredGraphEdgePositions :: (ColoredGraphTransformer i a b g, Ord i) => g -> [b]
+coloredGraphEdgePositions = Map.elems . snd <=< Map.elems . toColoredGraph
+
+-- | A standard implementation of 'MyLib.getPosition' for games
+--   with an underlying 'ColoredGraph' played on the edges.
+coloredGraphGetEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> Maybe b
+coloredGraphGetEdgePosition g (from, to) = Map.lookup from (toColoredGraph g) >>= (Map.lookup to . snd)
+
+-- | A standard implementation of 'MyLib.setPosition' for games
+--   with an underlying 'ColoredGraph' played on the vertices.
+coloredGraphSetEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> b -> Maybe g
+coloredGraphSetEdgePosition g (from, to) p = Map.lookup from c >>=
+    \(a, edges) -> if Map.member to edges
+      then Just $ fromColoredGraph g $ Map.insert from (a, Map.insert to p edges) c
+      else Nothing
+  where
+    c = toColoredGraph g
+
+-- | Like 'coloredGraphSetEdgePosition' but sets the value to the edges in both
+--   directions.
+coloredGraphSetBidirectedEdgePosition :: (ColoredGraphTransformer i a b g, Ord i) => g -> (i, i) -> b -> Maybe g
+coloredGraphSetBidirectedEdgePosition c (from, to) p = coloredGraphSetEdgePosition c (from, to) p >>=
+  \c' -> coloredGraphSetEdgePosition c' (to, from) p
+
+-- | A utility class for transforming to and from 'ColoredGraph'.
 --
 --   New-types of 'ColoredGraph' can derive this using the
 --   'GeneralizedNewtypeDeriving' language extension.
-class ColoredGraphVerticesPositionalGame i a b g | g -> i, g -> a, g -> b where
-  toColoredGraph :: g -> ColoredGraph i (Maybe a) b
-  fromColoredGraph :: g -> ColoredGraph i (Maybe a) b -> g
+class ColoredGraphTransformer i a b g | g -> i, g -> a, g -> b where
+  -- | "Extracts" the 'ColoredGraph' from a container type.
+  toColoredGraph :: g -> ColoredGraph i a b
+  -- | "Inserts" the 'ColoredGraph' into an already existing container type.
+  fromColoredGraph :: g -> ColoredGraph i a b -> g
 
-instance ColoredGraphVerticesPositionalGame i a b (ColoredGraph i (Maybe a) b) where
+instance ColoredGraphTransformer i a b (ColoredGraph i a b) where
   toColoredGraph c = c
   fromColoredGraph _ = id
