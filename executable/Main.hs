@@ -386,7 +386,7 @@ instance Show Havannah where
 
 instance PositionalGame Havannah (Int, Int) where
   getPosition (Havannah b) c = fst <$> lookup c b
-  positions (Havannah b) = values b
+  positions   (Havannah b) = values b
   setPosition (Havannah b) c p = if member c b
     then Just $ Havannah $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
@@ -425,7 +425,7 @@ instance Show Yavalath where
 
 instance PositionalGame Yavalath (Int, Int) where
   getPosition (Yavalath b) c = fst <$> lookup c b
-  positions (Yavalath b) = values b
+  positions   (Yavalath b) = values b
   setPosition (Yavalath b) c p = if member c b
     then Just $ Yavalath $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
@@ -467,7 +467,7 @@ instance Show MNKGame where
 
 instance PositionalGame MNKGame (Int, Int) where
   getPosition (MNKGame k b) c = fst <$> lookup c b
-  positions (MNKGame k b) = values b
+  positions   (MNKGame k b) = values b
   setPosition (MNKGame k b) c p = if member c b
     then Just $ MNKGame k $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
@@ -509,7 +509,7 @@ instance Show Y where
 
 instance PositionalGame Y (Int, Int) where
   getPosition (Y b) c = fst <$> lookup c b
-  positions (Y b) = values b
+  positions   (Y b) = values b
   setPosition (Y b) c p = if member c b
     then Just $ Y $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
@@ -542,34 +542,6 @@ emptyY :: Int -> Y
 emptyY = Y . triHexGraph
 
 -------------------------------------------------------------------------------
--- * Sim
--------------------------------------------------------------------------------
-
-newtype Sim = Sim (ColoredGraph Int () (Maybe Player))
-
-instance Show Sim where
-  show (Sim b) = show b
-
-instance PositionalGame Sim (Int, Int) where
-  getPosition (Sim b) (i, j) = lookup i b >>= fmap fst . find ((==j) . snd) . snd
-
-  positions (Sim b) = undefined
-  setPosition (Sim b) (i, j) p = if isJust $ getPosition (Sim b) (i, j)
-    then Just $ Sim $ adjust (\((), xs) -> ((), (\(z, k) -> (if k == j then Just p else z, k)) <$> xs)) i
-      $ adjust (\((), xs) -> ((), (\(z, k) -> (if k == i then Just p else z, k)) <$> xs)) j b
-    else Nothing
-  makeMove = takeEmptyMakeMove
-
-  gameOver (Sim b) = criterion b
-    where
-      criterion =
-        symmetric (mapEdges $ fmap nextPlayer) $
-        player1WinsIf (subgraph (kGraph 3) . filterEdges (==Just Player1))
-
-emptySim :: Int -> Sim
-emptySim = Sim . mapEdges (const Nothing) . kGraph
-
--------------------------------------------------------------------------------
 -- * Cross
 -------------------------------------------------------------------------------
 
@@ -580,7 +552,7 @@ instance Show Cross where
 
 instance PositionalGame Cross (Int, Int) where
   getPosition (Cross b) c = fst <$> lookup c b
-  positions (Cross b) = values b
+  positions   (Cross b) = values b
   setPosition (Cross b) c p = if member c b
     then Just $ Cross $ adjust (\(_, xs) -> (Just p, xs)) c b
     else Nothing
@@ -629,31 +601,8 @@ emptyCross = Cross . hexHexGraph
 
 data ConnectFour = ConnectFour Int (ColoredGraph (Int, Int) (Maybe Player) String)
 
--- 6 rows, 7 columbs
 instance Show ConnectFour where
-  --show (ConnectFour k b) = show b
-  show (ConnectFour k b) = intercalate "\n" [
-      "║                               ║"
-    , "║ " ++ intercalate " │ " (row (0 :: Int)) ++ " ║"
-    , "╟───┼───┼───┼───┼───┼───┼───┼───╢"
-    , "║ " ++ intercalate " │ " (row (1 :: Int)) ++ " ║"
-    , "╟───┼───┼───┼───┼───┼───┼───┼───╢"
-    , "║ " ++ intercalate " │ " (row (2 :: Int)) ++ " ║"
-    , "╟───┼───┼───┼───┼───┼───┼───┼───╢"
-    , "║ " ++ intercalate " │ " (row (3 :: Int)) ++ " ║"
-    , "╟───┼───┼───┼───┼───┼───┼───┼───╢"
-    , "║ " ++ intercalate " │ " (row (4 :: Int)) ++ " ║"
-    , "╟───┼───┼───┼───┼───┼───┼───┼───╢"
-    , "║ " ++ intercalate " │ " (row (5 :: Int)) ++ " ║"
-    , "╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝"
-    ]
-    where
-      -- "Shows" the elements of the given row
-     -- row :: Int -> [[Char]]
-      row y = map (\x -> showP (fromJust (getPosition b ((x::Int), y)))) [0..6]
-      showP (Just Player1) = "\ESC[34mo\ESC[0m"
-      showP (Just Player2) = "\ESC[31mx\ESC[0m"
-      showP  Nothing       = " "
+  show (ConnectFour k b) = show b
 
 instance PositionalGame ConnectFour (Int, Int) where
   getPosition (ConnectFour k b) c = fst <$> lookup c b
