@@ -58,5 +58,5 @@ test-suite boardgame-test
   default-language:    Haskell2010
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
-  main-is:             MyLibTest.hs
+  main-is:             BoardgameTest.hs
   build-depends:       base >=4.12
