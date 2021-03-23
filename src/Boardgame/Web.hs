@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module MyLib.Web (
+module Boardgame.Web (
     playWeb
   , defaultWebGame
   , addWebGame

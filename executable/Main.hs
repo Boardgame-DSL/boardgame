@@ -33,7 +33,7 @@ import Data.Map (
   , empty
   )
 import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
-import MyLib (
+import Boardgame (
     Player(..)
   , PositionalGame(..)
   , patternMatchingGameOver
@@ -62,12 +62,12 @@ import Data.Bifunctor (Bifunctor(second))
 import qualified Data.Vector as V ((!), fromList)
 import Data.Aeson
 import Data.Aeson.Types
-import MyLib.Web (addWebGame, webReady)
+import Boardgame.Web (addWebGame, webReady)
 #endif
 
 import Math.Geometry.Grid as Grid ()
 import Math.Geometry.Grid.Hexagonal ()
-import ColoredGraph (
+import Boardgame.ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
   , paraHexGraph

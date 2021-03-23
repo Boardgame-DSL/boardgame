@@ -3,7 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module MyLib (
+module Boardgame (
     Player(..)
   , PositionalGame(..)
   , nextPlayer

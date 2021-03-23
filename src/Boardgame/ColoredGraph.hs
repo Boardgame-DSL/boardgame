@@ -2,7 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module ColoredGraph (
+module Boardgame.ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
   , hexHexGraph
