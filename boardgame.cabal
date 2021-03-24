@@ -8,8 +8,8 @@ description:
   compilation).
 homepage:            https://github.com/Boardgame-DSL/boardgame
 bug-reports:         https://github.com/Boardgame-DSL/boardgame/issues
--- license:
--- license-file:        LICENSE
+license:             MIT
+license-file:        LICENSE
 -- maintainer:
 -- copyright:
 category:            Model, Game
