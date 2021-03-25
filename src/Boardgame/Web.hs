@@ -11,7 +11,7 @@ import Asterius.Aeson (jsonFromJSVal, jsonToJSVal)
 import Asterius.Types (JSVal)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor ((<&>))
-import MyLib (
+import Boardgame (
     Player(..)
   , PositionalGame(..)
   , playerToInt
