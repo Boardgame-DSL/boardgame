@@ -3,6 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 
+{-# LANGUAGE TupleSections #-}
 module Boardgame (
     Player(..)
   , PositionalGame(..)
@@ -17,6 +18,11 @@ module Boardgame (
   , player2WinsIf
   , player1LosesIf
   , player2LosesIf
+  , drawWhen
+  , player1WinsWhen
+  , player2WinsWhen
+  , player1LosesWhen
+  , player2LosesWhen
   , criteria
   , symmetric
   , unless
@@ -31,6 +37,7 @@ import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
+import Data.Bifunctor (first)
 #ifdef WASM
 import Data.Aeson (ToJSON(toJSON), Value(Number))
 import Data.Scientific (fromFloatDigits)
@@ -70,7 +77,7 @@ class PositionalGame a c | a -> c where
   -- > Nothing       -- Continue the game
   -- > Just (Just p) -- Player p won
   -- > Just Nothing  -- Draw
-  gameOver :: a -> Maybe (Maybe Player)
+  gameOver :: a -> Maybe (Maybe Player, [c])
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Maybe Player]
   -- | Returns which player (or nothing) has taken the position at the given
@@ -95,9 +102,9 @@ takeEmptyMakeMove a p coord = case getPosition a coord of
 --   a set of winning sets. A player is victorious when they "own" one of the
 --   winning sets. The game ends in a draw when all positions on the board are
 --   taken.
-patternMatchingGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
-patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomogeneousList . map (getPosition a)) patterns of
-    Nothing -> if all isJust (positions a) then Just Nothing else Nothing
+patternMatchingGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player, [c])
+patternMatchingGameOver patterns a = case find (isJust . fst) $ fmap (\pat -> (, pat) $ join (reduceHomogeneousList $ map (getPosition a) pat)) patterns of
+    Nothing -> if all isJust (positions a) then Just (Nothing, []) else Nothing
     just    -> just
   where
     -- | Returns an element of the homogeneous list, or 'Nothing'.
@@ -108,13 +115,13 @@ patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomoge
 -- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given
 --   a set of winning sets. Player1 wins when they "own" one of the winning
 --   sets. Player2 wins if Player1 cannot win.
-makerBreakerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
+makerBreakerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player, [c])
 makerBreakerGameOver patterns a
-  | player1won = Just $ Just Player1
-  | player2won = Just $ Just Player2
+  | Just coords <- player1won = Just (Just Player1, coords)
+  | player2won = Just (Just Player2, []) -- TODO: is there a way to compute the smallest set of coords necessary to win?
   | otherwise = Nothing
   where
-    player1won = any (all $ (== Just Player1) . fromJust . getPosition a) patterns
+    player1won = find (all $ (== Just Player1) . fromJust . getPosition a) patterns
     player2won = all (any $ (== Just Player2) . fromJust . getPosition a) patterns
 
 -- | The skeleton code for "playing" any 'PositionalGame'. When given a set of
@@ -129,7 +136,7 @@ play :: (Monad m, PositionalGame a c) =>
   -- ^ Function for getting a move from a player.
   -> m ()
   -- ^ Function for communicating an invalid move.
-  -> (Maybe Player -> m ())
+  -> ((Maybe Player, [c]) -> m ())
   -- ^ Function for outputting the end result of the game.
   -> a
   -> m ()
@@ -156,31 +163,31 @@ playIO = play putState putTurn getMove putInvalidMove putGameOver
       Nothing -> putStr "Invalid input, try again: " >> hFlush stdout >> getMove
     putInvalidMove = putStr "Invalid move, try again: " >> hFlush stdout
     putGameOver = \case
-      Just Player1 -> putStrLn "Player 1 won!" >> hFlush stdout
-      Just Player2 -> putStrLn "Player 2 won!" >> hFlush stdout
-      Nothing      -> putStrLn "It's a draw!" >> hFlush stdout
+      (Just Player1, _) -> putStrLn "Player 1 won!" >> hFlush stdout
+      (Just Player2, _) -> putStrLn "Player 2 won!" >> hFlush stdout
+      (Nothing, _)      -> putStrLn "It's a draw!" >> hFlush stdout
 
 
-data BiasedPositionalGame a c = BiasedPositionalGame Int Int a
+-- data BiasedPositionalGame a c = BiasedPositionalGame Int Int a
 
-instance PositionalGame a c => PositionalGame (BiasedPositionalGame a c) [c] where
-  makeMove (BiasedPositionalGame p q x) player index = BiasedPositionalGame p q <$> foldM (\z w -> makeMove z player w) x index
-  gameOver (BiasedPositionalGame p q x) = gameOver x
-  positions (BiasedPositionalGame p q x) = positions x
-  getPosition (BiasedPositionalGame p q x) = undefined
-  setPosition (BiasedPositionalGame p q x) = undefined
+-- instance PositionalGame a c => PositionalGame (BiasedPositionalGame a c) [c] where
+--   makeMove (BiasedPositionalGame p q x) player index = BiasedPositionalGame p q <$> foldM (\z w -> makeMove z player w) x index
+--   gameOver (BiasedPositionalGame p q x) = gameOver x
+--   positions (BiasedPositionalGame p q x) = positions x
+--   getPosition (BiasedPositionalGame p q x) = undefined
+--   setPosition (BiasedPositionalGame p q x) = undefined
 
 
-data CombinedPositionalGames a b i j = CombinedPositionalGames a b
+-- data CombinedPositionalGames a b i j = CombinedPositionalGames a b
 
-instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPositionalGames a b i j) (Either i j) where
-  makeMove (CombinedPositionalGames x y) player index = case index of
-    Left i -> flip CombinedPositionalGames y <$> makeMove x player i
-    Right i -> CombinedPositionalGames x <$> makeMove y player i
-  gameOver (CombinedPositionalGames x y) = gameOver x <|> gameOver y
-  positions (CombinedPositionalGames x y) = positions x ++ positions y
-  getPosition (CombinedPositionalGames x y) = undefined
-  setPosition (CombinedPositionalGames x y) = undefined
+-- instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPositionalGames a b i j) (Either i j) where
+--   makeMove (CombinedPositionalGames x y) player index = case index of
+--     Left i -> flip CombinedPositionalGames y <$> makeMove x player i
+--     Right i -> CombinedPositionalGames x <$> makeMove y player i
+--   gameOver (CombinedPositionalGames x y) = gameOver x <|> gameOver y
+--   positions (CombinedPositionalGames x y) = positions x ++ positions y
+--   getPosition (CombinedPositionalGames x y) = undefined
+--   setPosition (CombinedPositionalGames x y) = undefined
 
 
 
@@ -189,67 +196,90 @@ instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPos
 
 -- | If the predicate holds, a winning state for player 1 is returned. If
 --   not, a "game running" state is returned.
-player1WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player1WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player, [c])
 player1WinsIf pred x = if pred x
-  then Just $ Just Player1
+  then Just (Just Player1, [])
   else Nothing
 
 -- | A synonym for 'player1WinsIf'. When player 2 loses, player 1 wins.
-player2LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player2LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player, [c])
 player2LosesIf = player1WinsIf
 
 -- | If the predicate holds, a winning state for player 2 is returned. If
 --   not, a "game running" state is returned.
-player2WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player2WinsIf :: (a -> Bool) -> a -> Maybe (Maybe Player, [c])
 player2WinsIf pred x = if pred x
-  then Just $ Just Player2
+  then Just (Just Player2, [])
   else Nothing
 
 -- | A synonym for 'player2WinsIf'. When player 1 loses, player 2 wins.
-player1LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player)
+player1LosesIf :: (a -> Bool) -> a -> Maybe (Maybe Player, [c])
 player1LosesIf = player2WinsIf
 
 -- | If the predicate holds, a draw state is returned. If not, a "game running"
 --   state is returned.
-drawIf :: (a -> Bool) -> (a -> Maybe (Maybe Player))
+drawIf :: (a -> Bool) -> (a -> Maybe (Maybe Player, [c]))
 drawIf pred x = if pred x
-  then Just Nothing
+  then Just (Nothing, [])
   else Nothing
+
+-- | If the predicate holds, a winning state for player 1 is returned. If
+--   not, a "game running" state is returned.
+player1WinsWhen :: (a -> Maybe [c]) -> a -> Maybe (Maybe Player, [c])
+player1WinsWhen pred x = (Just Player1, ) <$> pred x
+
+-- | A synonym for 'player1WinsIf'. When player 2 loses, player 1 wins.
+player2LosesWhen :: (a -> Maybe [c]) -> a -> Maybe (Maybe Player, [c])
+player2LosesWhen = player1WinsWhen
+
+-- | If the predicate holds, a winning state for player 2 is returned. If
+--   not, a "game running" state is returned.
+player2WinsWhen :: (a -> Maybe [c]) -> a -> Maybe (Maybe Player, [c])
+player2WinsWhen pred x = (Just Player2, ) <$>  pred x
+
+-- | A synonym for 'player2WinsIf'. When player 1 loses, player 2 wins.
+player1LosesWhen :: (a -> Maybe [c]) -> a -> Maybe (Maybe Player, [c])
+player1LosesWhen = player2WinsWhen
+
+-- | If the predicate holds, a draw state is returned. If not, a "game running"
+--   state is returned.
+drawWhen :: (a -> Maybe [c]) -> (a -> Maybe (Maybe Player, [c]))
+drawWhen pred x = (Nothing, ) <$> pred x
 
 -- | Combines two criteria into one. If one criterion returns a game over
 --   state and the other a game running state, the game over state is returned.
 --   If the criteria returns different game over states, different winners or
 --   one draw and one winner, an error is raised.
-(+|+) :: (a -> Maybe (Maybe Player))
-      -> (a -> Maybe (Maybe Player))
-      -> (a -> Maybe (Maybe Player))
+(+|+) :: (a -> Maybe (Maybe Player, [c]))
+      -> (a -> Maybe (Maybe Player, [c]))
+      -> (a -> Maybe (Maybe Player, [c]))
 crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
-  (Just x, Just y) | x /= y -> error "conflicting result"
+  (Just x, Just y) | fst x /= fst y -> error "conflicting result"
   (x, y) -> x <|> y
 
 -- | Combines two criteria into one where if the first criterion does not
 --   return a game over state, the result of the second criterion is used.
-ifNotThen :: (a -> Maybe (Maybe Player))
-    -> (a -> Maybe (Maybe Player))
-    -> (a -> Maybe (Maybe Player))
+ifNotThen :: (a -> Maybe (Maybe Player, [c]))
+    -> (a -> Maybe (Maybe Player, [c]))
+    -> (a -> Maybe (Maybe Player, [c]))
 ifNotThen crit1 crit2 x = crit1 x <|> crit2 x
 
 infixl 8 `unless`
 -- | Combines two criteria into one where the first criterions result is
 --   returned, unless the second criterion returns a game over state.
-unless :: (a -> Maybe (Maybe Player))
-       -> (a -> Maybe (Maybe Player))
-       -> (a -> Maybe (Maybe Player))
+unless :: (a -> Maybe (Maybe Player, [c]))
+       -> (a -> Maybe (Maybe Player, [c]))
+       -> (a -> Maybe (Maybe Player, [c]))
 unless = flip ifNotThen
 
 -- | Combines several criteria into one. If two or more of the criteria returns
 --   different game over states, an error is raised.
-criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)
+criteria :: [a -> Maybe (Maybe Player, [c])] -> a -> Maybe (Maybe Player, [c])
 criteria = foldl1 (+|+)
 
 -- | Create a symmetric game from a game defined for only one player.
-symmetric :: (a -> a) -> (a -> Maybe (Maybe Player)) -> a -> Maybe (Maybe Player)
-symmetric flipState criterion = criterion +|+ (fmap (fmap nextPlayer) . criterion . flipState)
+symmetric :: (a -> a) -> (a -> Maybe (Maybe Player, [c])) -> a -> Maybe (Maybe Player, [c])
+symmetric flipState criterion = criterion +|+ (fmap (first $ fmap nextPlayer) . criterion . flipState)
 
 
 

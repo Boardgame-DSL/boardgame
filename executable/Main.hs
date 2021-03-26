@@ -32,7 +32,7 @@ import Data.Map (
   , alter
   , empty
   )
-import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
+import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe, isNothing)
 import Boardgame (
     Player(..)
   , PositionalGame(..)
@@ -49,6 +49,9 @@ import Boardgame (
   , player1LosesIf
   , unless
   , makerBreakerGameOver
+  , player1WinsWhen
+  , player2WinsWhen
+  , player1LosesWhen
   )
 import System.IO (hFlush, stdout)
 import Prelude hiding (lookup)
@@ -56,7 +59,6 @@ import Control.Applicative ((<|>))
 import Data.Tuple (swap)
 import qualified Data.Array ((!))
 import Data.Foldable (toList)
-import Data.Bifunctor (Bifunctor(second))
 
 #ifdef WASM
 import qualified Data.Vector as V ((!), fromList)
@@ -93,7 +95,7 @@ import Boardgame.ColoredGraph (
   , coloredGraphGetEdgePosition
   , coloredGraphSetBidirectedEdgePosition
   )
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, second)
 import Control.Monad (forM, forM_)
 import Data.Tree (Tree, foldTree)
 -------------------------------------------------------------------------------
@@ -231,9 +233,9 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
     Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, p) : drop (i + 1) l)
     Nothing -> Nothing
   gameOver (ShannonSwitchingGame (n, l))
-    | path g 0 (n * n - 1) = Just (Just Player1)
-    | path g (n - 1) (n * n - n) = Just (Just Player2)
-    | all (isJust . snd) l = Just Nothing
+    | path g 0 (n * n - 1) = Just (Just Player1, [])
+    | path g (n - 1) (n * n - n) = Just (Just Player2, [])
+    | all (isJust . snd) l = Just (Nothing, [])
     | otherwise = Nothing
     where
       g = buildG (0, n * n - 1) (map fst $ filter ((== Just Player1) . snd) l)
@@ -262,8 +264,8 @@ instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
       ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
     where
-      winPath = anyConnections (==2) [[start], [goal]] . filterEdges (== Just Player1)
-      losePath = not . anyConnections (==2) [[start], [goal]] . filterEdges (/= Just Player2)
+      winPath  = isJust    . anyConnections (==2) [[start], [goal]] . filterEdges (== Just Player1)
+      losePath = isNothing . anyConnections (==2) [[start], [goal]] . filterEdges (/= Just Player2)
 
 createEmptyShannonSwitchingGameCG :: [(Int, Int)] -> Int -> Int -> ShannonSwitchingGameCG
 createEmptyShannonSwitchingGameCG pairs start goal = ShannonSwitchingGameCG{
@@ -359,9 +361,9 @@ instance PositionalGame Gale (Integer, Integer) where
   setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c p b else Nothing
     where c = (x `div` 2, y)
   gameOver (Gale b)
-    | all isJust (elems b) = Just Nothing
-    | path player1Graph (-1) (-2) = Just $ Just Player1
-    | path player2Graph (-1) (-2) = Just $ Just Player2
+    | all isJust (elems b) = Just (Nothing, [])
+    | path player1Graph (-1) (-2) = Just (Just Player1, [])
+    | path player2Graph (-1) (-2) = Just (Just Player2, [])
     | otherwise            = Nothing
     where
       playerGraph from to p = buildG (-2, 19) $
@@ -421,9 +423,9 @@ instance PositionalGame Hex (Int, Int) where
       criterion =
         criteria
           -- There is a connection between 2 components, the left and right.
-          [ player1WinsIf (anyConnections (==2) [left, right]) . filterValues (==Just Player1)
+          [ player1WinsWhen (anyConnections (==2) [left, right]) . filterValues (==Just Player1)
            -- There is a connection between 2 components, the top and bottom.
-          , player2WinsIf (anyConnections (==2) [top, bottom]) . filterValues (==Just Player2)
+          , player2WinsWhen (anyConnections (==2) [top, bottom]) . filterValues (==Just Player2)
           ]
       left   = [(0,  i) | i <- [0..n-1]]
       right  = [(n-1,i) | i <- [0..n-1]]
@@ -493,7 +495,7 @@ instance PositionalGame Havannah (Int, Int) where
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues (nextPlayer <$>)) $
         drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
-        criteria (player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
+        criteria (player1WinsWhen <$> -- Player1 wins if any of these 3 criteria are satisfied.
             -- Player1 has connected 2 corners.
           [ anyConnections (>=2) corners . filterValues (== Just Player1)
             -- player1 has connecteed 3 edges (excluding the corners).
@@ -621,7 +623,7 @@ instance PositionalGame Y (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ fmap nextPlayer) $
-        player1WinsIf $ anyConnections (==3) [side1, side2, side3] . filterValues (== Just Player1)
+        player1WinsWhen $ anyConnections (==3) [side1, side2, side3] . filterValues (== Just Player1)
 
       dirs :: [(Int, Int)]
       dirs =
@@ -665,12 +667,12 @@ instance PositionalGame Cross (Int, Int) where
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues (nextPlayer <$>)) $
         drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
-        criteria (player1LosesIf <$> -- you lose if you have connected 2 opposite sides.
+        criteria (player1LosesWhen <$> -- you lose if you have connected 2 opposite sides.
           [ anyConnections (==2) [side1, side4] . filterValues (== Just Player1)
           , anyConnections (==2) [side2, side5] . filterValues (== Just Player1)
           , anyConnections (==2) [side3, side6] . filterValues (== Just Player1)
           ]) `unless`
-        criteria (player1WinsIf <$> -- you win if you have connected 3 non-adjacent sides.
+        criteria (player1WinsWhen <$> -- you win if you have connected 3 non-adjacent sides.
           [ anyConnections (==3) [side1, side3, side5] . filterValues (== Just Player1)
           , anyConnections (==3) [side2, side4, side6] . filterValues (== Just Player1)
           ])

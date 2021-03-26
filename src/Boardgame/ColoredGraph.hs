@@ -249,9 +249,19 @@ values = fmap fst . Map.elems
 
 -- | For every component of G, count how many groups of nodes they overlap with
 --   and check if the predicate holds on the count. If it matches on any
---   component then return true. Otherwise return false.
-anyConnections :: Ord i => (Int -> Bool) -> [[i]] -> ColoredGraph i a b -> Bool
-anyConnections pred groups g = any (\z -> pred $ length $ filter (not . Prelude.null . intersect z) groups) $ components g
+--   component then return that component. We also try to return only the parts
+--   of the component that are necessary for our predicate to hold.
+anyConnections :: Ord i => (Int -> Bool) -> [[i]] -> ColoredGraph i a b -> Maybe [i]
+anyConnections pred groups g = find cond $ components g
+  where
+    cond z = pred $ length $ filter (not . Prelude.null . intersect z) groups
+
+    minimize xs = maybe xs minimize $ find cond $ oneRemoved xs
+
+    oneRemoved :: [i] -> [[i]]
+    oneRemoved [] = []
+    oneRemoved [x] = [[]]
+    oneRemoved (x:xs) = xs : ((x:) <$> oneRemoved xs)
 
 
 -- | Is there a component along edges with value `dir` that has a length
