@@ -1,15 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 
-module MyLib.Web (
+module Boardgame.Web (
     playWeb
-  , webDefaultMain
+  , defaultWebGame
+  , addWebGame
+  , webReady
 ) where
 
 import Asterius.Aeson (jsonFromJSVal, jsonToJSVal)
 import Asterius.Types (JSVal)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor ((<&>))
-import MyLib (
+import Boardgame (
     Player(..)
   , PositionalGame(..)
   , playerToInt
@@ -24,16 +26,28 @@ foreign import javascript safe "boardgame._getMove()" jsGetMove :: IO JSVal
 foreign import javascript "boardgame._putInvalidInput()" jsPutInvalidInput :: IO ()
 foreign import javascript "boardgame._putInvalidMove()" jsPutInvalidMove :: IO ()
 foreign import javascript "boardgame._putGameOver($1)" jsPutGameOver :: JSVal -> IO ()
-foreign import javascript "boardgame.startGame = $1" jsSetGame :: JSVal -> IO ()
+foreign import javascript "boardgame.games[$1] = $2" jsSetGame :: JSVal -> JSVal -> IO ()
 foreign import javascript "boardgame._ready()" jsReady :: IO ()
 
--- | A main function for running games as a we app. Initializes the game and
---   "tells" JavaScript it's ready. Then JavaScript can start games whenever.
-webDefaultMain :: (ToJSON a, FromJSON c, PositionalGame a c) => a -> IO ()
-webDefaultMain startState = do
+-- | A main function for running games as a web app. Initializes the provided
+--   game as "default" and "tells" JavaScript it's ready. Then JavaScript can
+--   start games whenever.
+defaultWebGame :: (ToJSON a, FromJSON c, PositionalGame a c) => a -> IO ()
+defaultWebGame startState = do
   callback <- jsMakeCallback $ playWeb startState
-  jsSetGame callback
+  jsSetGame (jsonToJSVal "default") callback
   jsReady
+
+-- | Adds a named game to the list of games accessible from JavaScript.
+addWebGame :: (ToJSON a, FromJSON c, PositionalGame a c) => String -> a -> IO ()
+addWebGame name startState = do
+  callback <- jsMakeCallback $ playWeb startState
+  jsSetGame (jsonToJSVal name) callback
+
+-- | Lets JavaScript know that the Haskell backend is up and running by firing
+--   the ready event.
+webReady :: IO ()
+webReady = jsReady
 
 -- | Plays a 'PositionalGame' with the help of JavaScript FFI. The state of the
 --   game ('a') needs to implement 'Data.Aeson.ToJSON' and the coordinates

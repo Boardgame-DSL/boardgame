@@ -11,6 +11,12 @@ and [Mårten Åsberg](https://github.com/89netraM).
 [Group page](https://chalmers.instructure.com/groups/69903/wiki)
 (access restricted)
 
+## Description
+
+A library with the basis for modeling and playing boardgames. Comes with
+built-in functions for playing games through a web interface (requires WASM
+compilation).
+
 ## Development
 
 We use `cabal` for development.
