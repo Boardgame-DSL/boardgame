@@ -216,17 +216,6 @@ drawIf pred x = if pred x
   then Just Nothing
   else Nothing
 
--- | Combines two criteria into one. If one criterion returns a game over
---   state and the other a game running state, the game over state is returned.
---   If the criteria returns different game over states, different winners or
---   one draw and one winner, an error is raised.
-(+|+) :: (a -> Maybe (Maybe Player))
-      -> (a -> Maybe (Maybe Player))
-      -> (a -> Maybe (Maybe Player))
-crit1 +|+ crit2 = \x -> case (crit1 x, crit2 x) of
-  (Just x, Just y) | x /= y -> error "conflicting result"
-  (x, y) -> x <|> y
-
 -- | Combines two criteria into one where if the first criterion does not
 --   return a game over state, the result of the second criterion is used.
 ifNotThen :: (a -> Maybe (Maybe Player))
@@ -245,11 +234,11 @@ unless = flip ifNotThen
 -- | Combines several criteria into one. If two or more of the criteria returns
 --   different game over states, an error is raised.
 criteria :: [a -> Maybe (Maybe Player)] -> a -> Maybe (Maybe Player)
-criteria = foldl1 (+|+)
+criteria = foldl1 ifNotThen
 
 -- | Create a symmetric game from a game defined for only one player.
 symmetric :: (a -> a) -> (a -> Maybe (Maybe Player)) -> a -> Maybe (Maybe Player)
-symmetric flipState criterion = criterion +|+ (fmap (fmap nextPlayer) . criterion . flipState)
+symmetric flipState criterion = criterion `ifNotThen` (fmap (fmap nextPlayer) . criterion . flipState)
 
 
 
