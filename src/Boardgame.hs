@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 module Boardgame (
     Player(..)
   , PositionalGame(..)
@@ -31,13 +32,13 @@ module Boardgame (
 ) where
 
 import Data.Functor ((<&>))
-import Data.List (find, intercalate)
+import Data.List (find, intercalate, minimumBy, intersect)
 import Data.Maybe (isJust, fromJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
-import Data.Bifunctor (first)
+import Data.Bifunctor (first, Bifunctor (second))
 #ifdef WASM
 import Data.Aeson (ToJSON(toJSON), Value(Number))
 import Data.Scientific (fromFloatDigits)
@@ -118,12 +119,33 @@ patternMatchingGameOver patterns a = case find (isJust . fst) $ fmap (\pat -> (,
 makerBreakerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player, [c])
 makerBreakerGameOver patterns a
   | Just coords <- player1won = Just (Just Player1, coords)
-  | player2won = Just (Just Player2, []) -- TODO: is there a way to compute the smallest set of coords necessary to win?
+  | player2won = Just (Just Player2, player2Coords)
   | otherwise = Nothing
   where
     player1won = find (all $ (== Just Player1) . fromJust . getPosition a) patterns
     player2won = all (any $ (== Just Player2) . fromJust . getPosition a) patterns
 
+    -- A minimum set of coordinates which Player2 owns and contain atleast one element in every winning set.
+    -- This is only valid when `player2won` is `True`.
+    player2Coords = minimumBy compareLength $ assignments $ filter ((== Just Player2) . fromJust . getPosition a) <$> patterns
+
+    -- A lazy version of `comparing length`.
+    compareLength              :: [a] -> [b] -> Ordering
+    compareLength []     []     = EQ
+    compareLength (_:_)  []     = GT
+    compareLength []     (_:_)  = LT
+    compareLength (_:xs) (_:ys) = compareLength xs ys
+
+    -- Return all small sets which contain atleast one element from every set in the input.
+    -- This is used to solve the hitting set/set cover problem.
+    assignments :: Eq c => [[c]] -> [[c]]
+    assignments = assignments' []
+      where
+        assignments' set [] = [set]
+        assignments' set (claus:clauses) = if not $ null $ intersect set claus
+          then assignments' set clauses
+          else concat $ (\c -> assignments' (c:set) clauses) <$> claus
+    
 -- | The skeleton code for "playing" any 'PositionalGame'. When given a set of
 --   function for communicating the state of the game and moves, a starting
 --   state can be applied to play the game.
