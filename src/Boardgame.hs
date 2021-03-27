@@ -200,17 +200,19 @@ playIO = play putState putTurn getMove putInvalidMove putGameOver
 --   setPosition (BiasedPositionalGame p q x) = undefined
 
 
--- data CombinedPositionalGames a b i j = CombinedPositionalGames a b
+data CombinedPositionalGames a b i j = CombinedPositionalGames a b
 
--- instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPositionalGames a b i j) (Either i j) where
---   makeMove (CombinedPositionalGames x y) player index = case index of
---     Left i -> flip CombinedPositionalGames y <$> makeMove x player i
---     Right i -> CombinedPositionalGames x <$> makeMove y player i
---   gameOver (CombinedPositionalGames x y) = gameOver x <|> gameOver y
---   positions (CombinedPositionalGames x y) = positions x ++ positions y
---   getPosition (CombinedPositionalGames x y) = undefined
---   setPosition (CombinedPositionalGames x y) = undefined
-
+instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPositionalGames a b i j) (Either i j) where
+  makeMove (CombinedPositionalGames x y) player index = case index of
+    Left i -> flip CombinedPositionalGames y <$> makeMove x player i
+    Right i -> CombinedPositionalGames x <$> makeMove y player i
+  gameOver (CombinedPositionalGames x y) = (second (fmap Left)  <$> gameOver x)
+                                       <|> (second (fmap Right) <$> gameOver y)
+  positions (CombinedPositionalGames x y) = positions x ++ positions y
+  getPosition (CombinedPositionalGames x y) = either (getPosition x) (getPosition y)
+  setPosition (CombinedPositionalGames x y) ij p = case ij of
+    Left i -> flip CombinedPositionalGames y <$> setPosition x i p
+    Right j -> CombinedPositionalGames x <$> setPosition y j p
 
 
 
