@@ -36,6 +36,7 @@ import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
 import Boardgame (
     Player(..)
   , Position(..)
+  , Outcome(..)
   , PositionalGame(..)
   , mapPosition
   , isOccupied
@@ -231,9 +232,9 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
     Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, p) : drop (i + 1) l)
     Nothing -> Nothing
   gameOver (ShannonSwitchingGame (n, l))
-    | path g 0 (n * n - 1) = Just (Just Player1)
-    | path g (n - 1) (n * n - n) = Just (Just Player2)
-    | all (isOccupied . snd) l = Just Nothing
+    | path g 0 (n * n - 1) = Just $ Win Player1
+    | path g (n - 1) (n * n - n) = Just $ Win Player2
+    | all (isOccupied . snd) l = Just Draw
     | otherwise = Nothing
     where
       g = buildG (0, n * n - 1) (map fst $ filter ((== Occupied Player1) . snd) l)
@@ -359,9 +360,9 @@ instance PositionalGame Gale (Integer, Integer) where
   setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c p b else Nothing
     where c = (x `div` 2, y)
   gameOver (Gale b)
-    | path player1Graph (-1) (-2) = Just $ Just Player1
-    | path player2Graph (-1) (-2) = Just $ Just Player2
-    | all isOccupied (elems b) = Just Nothing
+    | path player1Graph (-1) (-2) = Just $ Win Player1
+    | path player2Graph (-1) (-2) = Just $ Win Player2
+    | all isOccupied (elems b) = Just Draw
     | otherwise            = Nothing
     where
       playerGraph from to p = buildG (-2, 19) $
