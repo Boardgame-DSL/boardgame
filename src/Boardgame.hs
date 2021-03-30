@@ -5,8 +5,11 @@
 
 module Boardgame (
     Player(..)
+  , Position(..)
   , PositionalGame(..)
   , nextPlayer
+  , mapPosition
+  , isOccupied
   , play
   , playerToInt
   , playIO
@@ -32,7 +35,7 @@ import Text.Read (readMaybe)
 import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
 #ifdef WASM
-import Data.Aeson (ToJSON(toJSON), Value(Number))
+import Data.Aeson (ToJSON(toJSON), Value(Number, Null))
 import Data.Scientific (fromFloatDigits)
 #endif
 
@@ -55,6 +58,27 @@ instance ToJSON Player where
   toJSON = Number . fromFloatDigits . fromIntegral . playerToInt
 #endif
 
+-- | A 'Position' can either be 'Occupied' by a 'Player' or be 'Empty'.
+data Position = Occupied Player | Empty
+  deriving (Eq, Show)
+
+#ifdef WASM
+instance ToJSON Position where
+  toJSON (Occupied p) = toJSON p
+  toJSON Empty     = Null
+#endif
+
+-- | Applies the given function to a occupying piece, or does nothing in the case
+--   of an 'Empty' 'Position'.
+mapPosition :: (Player -> Player) -> Position -> Position
+mapPosition f (Occupied p) = Occupied $ f p
+mapPosition _ Empty     = Empty
+
+-- | Checks if the position is occupied or not.
+isOccupied :: Position -> Bool
+isOccupied (Occupied _) = True
+isOccupied Empty     = False
+
 -- | A type class for positional games where `a` is the game itself and `c` is
 --   its accompanying "coordinate" type.
 class PositionalGame a c | a -> c where
@@ -72,38 +96,39 @@ class PositionalGame a c | a -> c where
   -- > Just Nothing  -- Draw
   gameOver :: a -> Maybe (Maybe Player)
   -- | Returns a list of all positions. Not in any particular order.
-  positions :: a -> [Maybe Player]
+  positions :: a -> [Position]
   -- | Returns which player (or nothing) has taken the position at the given
   --   coordinate, or 'Nothing' if the given coordinate is invalid.
   --
   -- > Nothing       -- Invalid position
   -- > Just (Just p) -- Player p owns this position
   -- > Just Nothing  -- This position is empty
-  getPosition :: a -> c -> Maybe (Maybe Player)
+  getPosition :: a -> c -> Maybe Position
   -- | Takes the position at the given coordinate for the given player and
   --   returns the new state, or 'Nothing' if the given coordinate is invalid.
-  setPosition :: a -> c -> Maybe Player -> Maybe a
+  setPosition :: a -> c -> Position -> Maybe a
 
 -- | A standard implementation of 'makeMove' for a 'PositionalGame'.
 --   Only allows move that "take" empty existing positions.
 takeEmptyMakeMove :: PositionalGame a c => a -> Player -> c -> Maybe a
 takeEmptyMakeMove a p coord = case getPosition a coord of
-  Just Nothing -> setPosition a coord (Just p)
-  _            -> Nothing
+  Just Empty -> setPosition a coord (Occupied p)
+  _          -> Nothing
 
 -- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given
 --   a set of winning sets. A player is victorious when they "own" one of the
 --   winning sets. The game ends in a draw when all positions on the board are
 --   taken.
 patternMatchingGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player)
-patternMatchingGameOver patterns a = case find isJust $ map (join . reduceHomogeneousList . map (getPosition a)) patterns of
-    Nothing -> if all isJust (positions a) then Just Nothing else Nothing
-    just    -> just
+patternMatchingGameOver patterns a = case find isOccupied $ map (reduceHomogeneousList . map (fromJust . getPosition a)) patterns of
+    Nothing -> if all isOccupied (positions a) then Just Nothing else Nothing
+    Just (Occupied winner) -> Just $ Just winner
+    Just Empty          -> Just Nothing
   where
     -- | Returns an element of the homogeneous list, or 'Nothing'.
-    reduceHomogeneousList :: (Eq a) => [Maybe a] -> Maybe a
-    reduceHomogeneousList []     = Nothing
-    reduceHomogeneousList (x:xs) = if all (== x) xs then x else Nothing
+    reduceHomogeneousList :: [Position] -> Position
+    reduceHomogeneousList []     = Empty
+    reduceHomogeneousList (x:xs) = if all (== x) xs then x else Empty
 
 -- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given
 --   a set of winning sets. Player1 wins when they "own" one of the winning
@@ -114,8 +139,8 @@ makerBreakerGameOver patterns a
   | player2won = Just $ Just Player2
   | otherwise = Nothing
   where
-    player1won = any (all $ (== Just Player1) . fromJust . getPosition a) patterns
-    player2won = all (any $ (== Just Player2) . fromJust . getPosition a) patterns
+    player1won = any (all $ (== Occupied Player1) . fromJust . getPosition a) patterns
+    player2won = all (any $ (== Occupied Player2) . fromJust . getPosition a) patterns
 
 -- | The skeleton code for "playing" any 'PositionalGame'. When given a set of
 --   function for communicating the state of the game and moves, a starting
