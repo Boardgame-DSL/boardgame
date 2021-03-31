@@ -189,17 +189,6 @@ playIO = play putState putTurn getMove putInvalidMove putGameOver
       (Just Player2, _) -> putStrLn "Player 2 won!" >> hFlush stdout
       (Nothing, _)      -> putStrLn "It's a draw!" >> hFlush stdout
 
-
--- data BiasedPositionalGame a c = BiasedPositionalGame Int Int a
-
--- instance PositionalGame a c => PositionalGame (BiasedPositionalGame a c) [c] where
---   makeMove (BiasedPositionalGame p q x) player index = BiasedPositionalGame p q <$> foldM (\z w -> makeMove z player w) x index
---   gameOver (BiasedPositionalGame p q x) = gameOver x
---   positions (BiasedPositionalGame p q x) = positions x
---   getPosition (BiasedPositionalGame p q x) = undefined
---   setPosition (BiasedPositionalGame p q x) = undefined
-
-
 data CombinedPositionalGames a b i j = CombinedPositionalGames a b
 
 instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPositionalGames a b i j) (Either i j) where
