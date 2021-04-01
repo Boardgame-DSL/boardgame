@@ -526,6 +526,11 @@ newtype Havannah = Havannah (ColoredGraph (Int, Int) Position ())
 instance Show Havannah where
   show (Havannah b) = show b
 
+#ifdef WASM
+instance ToJSON Havannah where
+  toJSON (Havannah b) = toJSON b
+#endif
+
 instance PositionalGame Havannah (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
@@ -807,6 +812,7 @@ main = do
   addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
   addWebGame "Gale" emptyGale
   addWebGame "Hex" $ emptyHex 5
+  addWebGame "Havannah" $ emptyHavannah 8
   addWebGame "Hex (Alternative Version)" $ emptyHex2 5
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
