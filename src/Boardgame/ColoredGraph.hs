@@ -266,8 +266,8 @@ anyConnections pred groups g = find cond $ components g
 
 -- | Is there a component along edges with value `dir` that has a length
 --   accepted by `pred`.
-inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
-inARow pred dir = any (pred . length) . components . filterEdges (==dir)
+inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Maybe [i]
+inARow pred dir = find (pred . length) . components . filterEdges (==dir)
 
 -- | Returns the winning sets representing paths from one set of nodes to
 --   another on a graph.

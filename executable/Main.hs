@@ -534,8 +534,8 @@ instance PositionalGame Yavalath (Int, Int) where
         -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
         -- It's important we use `unless` here because otherwise we could have conflicting
         -- outcomes from having both 3 in a row and 4 in a row at the same time.
-        criteria (player1LosesIf . inARow (==3) <$> directions) . filterValues (== Just Player1) `unless`
-        criteria (player1WinsIf . inARow (>=4) <$> directions) . filterValues (== Just Player1)
+        criteria (player1LosesWhen . inARow (==3) <$> directions) . filterValues (== Just Player1) `unless`
+        criteria (player1WinsWhen . inARow (>=4) <$> directions) . filterValues (== Just Player1)
 
       directions = ["vertical", "diagonal1", "diagonal2"]
 
@@ -581,8 +581,8 @@ instance PositionalGame MNKGame (Int, Int) where
         symmetric (mapValues $ fmap nextPlayer) $
         drawIf (all isJust . values) `unless` -- It's a draw if all tiles are owned.
         -- Player1 wins if there are k or more pieces in a row in any direction.
-        (criteria (player1WinsIf . inARow (>=k) <$> directions) . filterValues (== Just Player1))
-          
+        (criteria (player1WinsWhen . inARow (>=k) <$> directions) . filterValues (== Just Player1))
+
 
       directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
 
@@ -722,7 +722,7 @@ instance PositionalGame ConnectFour (Int, Int) where
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ fmap nextPlayer)
         -- Player1 wins if there are k or more pieces in a row in any direction.
-        (criteria (player1WinsIf . inARow (>=k) <$> directions) . filterValues (== Just Player1))
+        (criteria (player1WinsWhen . inARow (>=k) <$> directions) . filterValues (== Just Player1))
 
       directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
 
@@ -733,7 +733,7 @@ instance PositionalGame ConnectFour (Int, Int) where
 newMakeMove :: ConnectFour -> Player -> (Int, Int) -> Maybe ConnectFour
 newMakeMove a p coord = case getPosition a coord of
   -- If we are at bottom row, we can place the piece there.
-  Just Nothing -> if ((fst coord) == 0) 
+  Just Nothing -> if ((fst coord) == 0)
                     then setPosition a coord (Just p)
                     -- Not at bottom row, check to see if position below has been filled.
                     else case getPosition a ((fst coord) -1, snd coord) of
