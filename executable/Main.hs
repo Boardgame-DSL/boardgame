@@ -567,6 +567,11 @@ newtype Yavalath = Yavalath (ColoredGraph (Int, Int) Position String)
 instance Show Yavalath where
   show (Yavalath b) = show b
 
+#ifdef WASM
+instance ToJSON Yavalath where
+  toJSON (Yavalath b) = toJSON b
+#endif
+
 instance PositionalGame Yavalath (Int, Int) where
   positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
@@ -813,6 +818,7 @@ main = do
   addWebGame "Gale" emptyGale
   addWebGame "Hex" $ emptyHex 5
   addWebGame "Havannah" $ emptyHavannah 8
+  addWebGame "Yavalath" $ emptyYavalath 8
   addWebGame "Hex (Alternative Version)" $ emptyHex2 5
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
