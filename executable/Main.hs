@@ -380,6 +380,11 @@ instance Show Gale where
         | otherwise   = "\ESC[31m═══"
       showP Empty _   = "   "
 
+#ifdef WASM
+instance ToJSON Gale where
+  toJSON (Gale b) = toJSON b
+#endif
+
 instance PositionalGame Gale (Integer, Integer) where
   getPosition (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing
     where c = (x `div` 2, y)
@@ -789,6 +794,7 @@ main = do
   addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
   addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 5 35
   addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
+  addWebGame "Gale" emptyGale
   addWebGame "Hex" $ emptyHex 5
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
