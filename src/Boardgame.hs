@@ -145,7 +145,13 @@ makerBreakerGameOver patterns a
         assignments' set (claus:clauses) = if not $ null $ intersect set claus
           then assignments' set clauses
           else concat $ (\c -> assignments' (c:set) clauses) <$> claus
-    
+
+-- | Returns an implementation of 'gameOver' for a 'PositionalGame' when given
+--   a set of winning sets. Player1 wins if they can avoid "owning" any of the
+--   winning sets. Player2 wins if Player1 owns a winning set.
+avoiderEnforcerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player, [c])
+avoiderEnforcerGameOver patterns a = first (fmap nextPlayer) <$> makerBreakerGameOver patterns a
+
 -- | The skeleton code for "playing" any 'PositionalGame'. When given a set of
 --   function for communicating the state of the game and moves, a starting
 --   state can be applied to play the game.
