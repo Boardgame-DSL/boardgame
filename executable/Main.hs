@@ -234,6 +234,14 @@ instance Show ShannonSwitchingGame where
       showV (Occupied Player2) = "\ESC[31m│\ESC[0m"
       showV Empty           = "│"
 
+#ifdef WASM
+instance ToJSON ShannonSwitchingGame where
+  toJSON (ShannonSwitchingGame (n, ps)) = object [
+      "n"         .= toJSON n
+    , "positions" .= toJSON ps
+    ]
+#endif
+
 instance PositionalGame ShannonSwitchingGame (Int, Int) where
   getPosition (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
   positions (ShannonSwitchingGame (_, l)) = map snd l
@@ -770,6 +778,7 @@ main :: IO ()
 main = do
   addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
   addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 5 35
+  addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
   addWebGame "Hex" $ emptyHex 5
   webReady
 #else
