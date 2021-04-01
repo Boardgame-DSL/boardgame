@@ -771,6 +771,14 @@ data ConnectFour = ConnectFour Int (ColoredGraph (Int, Int) Position String)
 instance Show ConnectFour where
   show (ConnectFour k b) = show b
 
+#ifdef WASM
+instance ToJSON ConnectFour where
+  toJSON (ConnectFour k b) = object [
+      "k"     .= toJSON k
+    , "board" .= toJSON b
+    ]
+#endif
+
 instance PositionalGame ConnectFour (Int, Int) where
   getPosition (ConnectFour k b) c = fst <$> lookup c b
   positions   (ConnectFour k b) = values b
@@ -836,6 +844,7 @@ main = do
   addWebGame "Cross" $ emptyCross 8
   addWebGame "Hex (Alternative Version)" $ emptyHex2 5
   addWebGame "TicTacToe (Alternative Version)" $ emptyMNKGame 3 3 3
+  addWebGame "Connect Four" $ emptyConnectFour 6 7 4
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
 #else
