@@ -664,6 +664,11 @@ newtype Y = Y (ColoredGraph (Int, Int) Position (Int, Int))
 instance Show Y where
   show (Y b) = show b
 
+#ifdef WASM
+instance ToJSON Y where
+  toJSON (Y b) = toJSON b
+#endif
+
 instance PositionalGame Y (Int, Int) where
   getPosition (Y b) c = fst <$> lookup c b
   positions (Y b) = values b
@@ -822,6 +827,7 @@ main = do
   addWebGame "Hex" $ emptyHex 5
   addWebGame "Havannah" $ emptyHavannah 8
   addWebGame "Yavalath" $ emptyYavalath 8
+  addWebGame "Y" $ emptyY 8
   addWebGame "Hex (Alternative Version)" $ emptyHex2 5
   addWebGame "TicTacToe (Alternative Version)" $ emptyMNKGame 3 3 3
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
