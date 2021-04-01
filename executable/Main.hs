@@ -614,7 +614,10 @@ instance Show MNKGame where
 
 #if WASM
 instance ToJSON MNKGame where
-  toJSON (MNKGame _ b) = toJSON b
+  toJSON (MNKGame k b) = object [
+      "k"     .= toJSON k
+    , "board" .= toJSON b
+    ]
 #endif
 
 instance ColoredGraphTransformer (Int, Int) Position String MNKGame where
@@ -812,7 +815,7 @@ emptyConnectFour m n k = ConnectFour k $ mapEdges dirName $ rectOctGraph m n
 #ifdef WASM
 main :: IO ()
 main = do
-  addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
+  addWebGame "TicTacToe" emptyTicTacToe
   addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 5 35
   addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
   addWebGame "Gale" emptyGale
@@ -820,6 +823,7 @@ main = do
   addWebGame "Havannah" $ emptyHavannah 8
   addWebGame "Yavalath" $ emptyYavalath 8
   addWebGame "Hex (Alternative Version)" $ emptyHex2 5
+  addWebGame "TicTacToe (Alternative Version)" $ emptyMNKGame 3 3 3
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
 #else
