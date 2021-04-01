@@ -3,6 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -181,6 +182,14 @@ instance Show ArithmeticProgressionGame where
       showP (Occupied Player1) = "  \ESC[34mO\ESC[0m"
       showP (Occupied Player2) = "  \ESC[31mX\ESC[0m"
       pad x = replicate (3 - length x) ' ' ++ x
+
+#ifdef WASM
+instance ToJSON ArithmeticProgressionGame where
+  toJSON (ArithmeticProgressionGame n ps) = object [
+      "n"         .= toJSON n
+    , "positions" .= toJSON ps
+    ]
+#endif
 
 instance PositionalGame ArithmeticProgressionGame Int where
   getPosition (ArithmeticProgressionGame _ l) i = if i <= length l then Just $ l !! (i - 1) else Nothing
@@ -760,6 +769,7 @@ emptyConnectFour m n k = ConnectFour k $ mapEdges dirName $ rectOctGraph m n
 main :: IO ()
 main = do
   addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
+  addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 5 35
   addWebGame "Hex" $ emptyHex 5
   webReady
 #else
