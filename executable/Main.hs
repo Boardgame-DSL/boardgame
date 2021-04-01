@@ -483,6 +483,14 @@ instance Show Hex2 where
     ++
     "\n" ++ concat (replicate n " \\_/")
 
+#ifdef WASM
+instance ToJSON Hex2 where
+  toJSON (Hex2 n b) = object [
+      "n"     .= toJSON n
+    , "board" .= toJSON b
+    ]
+#endif
+
 gridShowLine2 :: Hex2 -> Int -> [String]
 gridShowLine2 (Hex2 n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
                           ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, n-1-y) b) [0..(n-1)]) ++ " |"
@@ -799,6 +807,7 @@ main = do
   addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
   addWebGame "Gale" emptyGale
   addWebGame "Hex" $ emptyHex 5
+  addWebGame "Hex (Alternative Version)" $ emptyHex2 5
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
 #else
