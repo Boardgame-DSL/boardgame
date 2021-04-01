@@ -834,7 +834,7 @@ emptyConnectFour m n k = ConnectFour k $ mapEdges dirName $ rectOctGraph m n
 main :: IO ()
 main = do
   addWebGame "TicTacToe" emptyTicTacToe
-  addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 5 35
+  addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 35 5
   addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
   addWebGame "Gale" emptyGale
   addWebGame "Hex" $ emptyHex 5
