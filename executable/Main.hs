@@ -269,6 +269,16 @@ data ShannonSwitchingGameCG = ShannonSwitchingGameCG {
   }
   deriving (Show)
 
+#if WASM
+instance ToJSON ShannonSwitchingGameCG where
+  toJSON ShannonSwitchingGameCG{ start, goal, graph } =
+    object [
+        "start" .= start
+      , "goal" .= goal
+      , "graph" .= graph
+      ]
+#endif
+
 instance ColoredGraphTransformer Int () Position ShannonSwitchingGameCG where
   toColoredGraph = graph
   fromColoredGraph ssg graph = ssg{ graph }
@@ -780,6 +790,7 @@ main = do
   addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 5 35
   addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
   addWebGame "Hex" $ emptyHex 5
+  addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
 #else
 main :: IO ()
