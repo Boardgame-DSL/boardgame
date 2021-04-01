@@ -39,6 +39,7 @@ import Data.Maybe ( fromJust, isJust, listToMaybe, mapMaybe )
 import Data.Tree (Tree(..), foldTree)
 import Control.Monad ((<=<))
 import Data.Bifunctor ( bimap, Bifunctor (first, second) )
+import Boardgame (Position(..))
 
 
 -- | A Graph with colored vertices and edges. The key of the map is 'i', the
@@ -111,8 +112,8 @@ distance (x, y) (i, j) = (abs(x - i) + abs(x + y - i - j) + abs(y - j)) `div` 2
 --   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' is at
 --   the center. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
-hexHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((< radius) . distance (0, 0) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0..5]))) <$> nodes)
+hexHexGraph :: Int -> ColoredGraph (Int, Int) Position (Int, Int)
+hexHexGraph radius = Map.fromList ((\z -> (z , (Empty, Map.fromList $ filter ((< radius) . distance (0, 0) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0..5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = (0, 0) : concatMap hexHexGraphRing [1..radius-1]
@@ -127,8 +128,8 @@ hexHexGraph radius = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter (
 --   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' is at
 --   the center. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
-paraHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0..5]))) <$> nodes)
+paraHexGraph :: Int -> ColoredGraph (Int, Int) Position (Int, Int)
+paraHexGraph n = Map.fromList ((\z -> (z , (Empty, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0..5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..n-1], j <- [0..n-1]]
@@ -139,8 +140,8 @@ paraHexGraph n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i
 --   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' the top
 --   left vertex. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
-rectOctGraph :: Int -> Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . fst) $ (\i -> (octoNeighbors z !! i, octoDirections !! i)) <$> [0..7]))) <$> nodes)
+rectOctGraph :: Int -> Int -> ColoredGraph (Int, Int) Position (Int, Int)
+rectOctGraph m n = Map.fromList ((\z -> (z , (Empty, Map.fromList $ filter ((\(i, j) -> i < m && i >= 0 && j < n && j >= 0) . fst) $ (\i -> (octoNeighbors z !! i, octoDirections !! i)) <$> [0..7]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0..m-1], j <- [0..n-1]]
@@ -151,8 +152,8 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\
 --   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' the top
 --   left vertex. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
-triHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-triHexGraph n = Map.fromList ((\z -> (z, (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . snd) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 7]))) <$> nodes)
+triHexGraph :: Int -> ColoredGraph (Int, Int) Position (Int, Int)
+triHexGraph n = Map.fromList ((\z -> (z, (Empty, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . snd) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 7]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0 .. n -1], j <- [0 .. n -1], i + j >= n]
