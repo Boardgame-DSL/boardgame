@@ -428,7 +428,10 @@ instance Show Hex where
 
 #ifdef WASM
 instance ToJSON Hex where
-  toJSON (Hex _ m) = toJSON m
+  toJSON (Hex n b) = object [
+      "n"     .= toJSON n
+    , "board" .= toJSON b
+    ]
 #endif
 
 gridShowLine :: Hex -> Int -> [String]
