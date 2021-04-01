@@ -712,6 +712,11 @@ newtype Cross = Cross (ColoredGraph (Int, Int) Position (Int, Int))
 instance Show Cross where
   show (Cross b) = show b
 
+#ifdef WASM
+instance ToJSON Cross where
+  toJSON (Cross b) = toJSON b
+#endif
+
 instance PositionalGame Cross (Int, Int) where
   getPosition (Cross b) c = fst <$> lookup c b
   positions (Cross b) = values b
@@ -828,6 +833,7 @@ main = do
   addWebGame "Havannah" $ emptyHavannah 8
   addWebGame "Yavalath" $ emptyYavalath 8
   addWebGame "Y" $ emptyY 8
+  addWebGame "Cross" $ emptyCross 8
   addWebGame "Hex (Alternative Version)" $ emptyHex2 5
   addWebGame "TicTacToe (Alternative Version)" $ emptyMNKGame 3 3 3
   addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
