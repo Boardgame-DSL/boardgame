@@ -267,7 +267,7 @@ anyConnections pred groups = findComponent cond
 
 -- | Is there a component along edges with value `dir` that has a length
 --   accepted by `pred`? If there is we return a subset of that component that
---   mathces the predicate
+--   matches the predicate
 inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Maybe [i]
 inARow pred dir = findComponent (pred . length) . filterEdges (==dir)
 
