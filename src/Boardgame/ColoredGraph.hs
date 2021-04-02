@@ -152,7 +152,7 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\
 --   left vertex. The color of edges will also be a '(Int, Int)' tuple that
 --   shows the "direction" of the edge.
 triHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
-triHexGraph n = Map.fromList ((\z -> (z, (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . snd) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 7]))) <$> nodes)
+triHexGraph n = Map.fromList ((\z -> (z, (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0 .. n -1], j <- [0 .. n -1], i + j >= n]
