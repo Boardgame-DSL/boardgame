@@ -148,9 +148,9 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Nothing, Map.fromList $ filter ((\
 -- | Creates a triangular shaped graph of hexagon vertices (each vertex has
 --   six outgoing edges) with the given side length.
 --
---   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' the top
---   left vertex. The color of edges will also be a '(Int, Int)' tuple that
---   shows the "direction" of the edge.
+--   The "coordinates" of the graph will be '(Int, Int)' where '(1, n-1)',
+--   '(n-1, 1)' and '(n-1, n-1)' are the 3 corners. The color of edges will
+--   also be a '(Int, Int)' tuple that shows the "direction" of the edge.
 triHexGraph :: Int -> ColoredGraph (Int, Int) (Maybe a) (Int, Int)
 triHexGraph n = Map.fromList ((\z -> (z, (Nothing, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 5]))) <$> nodes)
   where
