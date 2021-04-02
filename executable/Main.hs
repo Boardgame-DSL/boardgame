@@ -441,6 +441,12 @@ data Hex2 = Hex2 Int (ColoredGraph (Int, Int) (Maybe Player) (Int, Int))
 emptyHex2 :: Int -> Hex2
 emptyHex2 n = Hex2 n $ paraHexGraph n
 
+
+#ifdef WASM
+instance ToJSON Hex2 where
+  toJSON (Hex2 _ m) = toJSON m
+#endif
+
 instance Show Hex2 where
   show (Hex2 n b) =
     replicate (2*(n-1)) ' ' ++ concat (replicate n "  _ ") ++ "\n"
@@ -483,6 +489,11 @@ newtype Havannah = Havannah (ColoredGraph (Int, Int) (Maybe Player) ())
 
 instance Show Havannah where
   show (Havannah b) = show b
+
+#ifdef WASM
+instance ToJSON Havannah where
+  toJSON (Havannah m) = toJSON m
+#endif
 
 instance PositionalGame Havannah (Int, Int) where
   positions = coloredGraphVertexPositions
@@ -762,6 +773,7 @@ main :: IO ()
 main = do
   addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
   addWebGame "Hex" $ emptyHex 5
+  addWebGame "Hex2" $ emptyHex2 5
   webReady
 #else
 main :: IO ()

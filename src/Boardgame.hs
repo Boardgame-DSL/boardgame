@@ -78,6 +78,8 @@ class PositionalGame a c | a -> c where
   -- > Nothing       -- Continue the game
   -- > Just (Just p) -- Player p won
   -- > Just Nothing  -- Draw
+  -- 
+  -- We also return a list of coordinates to highlight.
   gameOver :: a -> Maybe (Maybe Player, [c])
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Maybe Player]
@@ -104,7 +106,7 @@ takeEmptyMakeMove a p coord = case getPosition a coord of
 --   winning sets. The game ends in a draw when all positions on the board are
 --   taken.
 patternMatchingGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Maybe Player, [c])
-patternMatchingGameOver patterns a = case find (isJust . fst) $ fmap (\pat -> (, pat) $ join (reduceHomogeneousList $ map (getPosition a) pat)) patterns of
+patternMatchingGameOver patterns a = case find (isJust . fst) $ fmap (\pat -> (, pat) $ join (reduceHomogeneousList $ fmap (getPosition a) pat)) patterns of
     Nothing -> if all isJust (positions a) then Just (Nothing, []) else Nothing
     just    -> just
   where
@@ -136,7 +138,8 @@ makerBreakerGameOver patterns a
     compareLength []     (_:_)  = LT
     compareLength (_:xs) (_:ys) = compareLength xs ys
 
-    -- Return all small sets which contain atleast one element from every set in the input.
+    -- Return all sets which contain atleast one element from every set in the input
+    -- and avoiding unneccesary elements.
     -- This is used to solve the hitting set/set cover problem.
     assignments :: Eq c => [[c]] -> [[c]]
     assignments = assignments' []
