@@ -62,4 +62,4 @@ playWeb = play putState putTurn getMove putInvalidMove putGameOver
       Left _  -> jsPutInvalidInput >> getMove
       Right c -> return c
     putInvalidMove = jsPutInvalidMove
-    putGameOver = jsPutGameOver . jsonToJSVal . fmap playerToInt
+    putGameOver = jsPutGameOver . jsonToJSVal
