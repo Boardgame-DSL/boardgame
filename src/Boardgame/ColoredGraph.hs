@@ -167,7 +167,6 @@ completeGraph n = Map.fromList [ (i, ((), Map.fromList [(j, ()) | j <- [0..n-1],
 
 
 
-
 -- Returns the first value that is accepted by the predicate, or 'Nothing'.
 firstJust :: (a -> Maybe b) -> [a] -> Maybe b
 firstJust f = listToMaybe . mapMaybe f
