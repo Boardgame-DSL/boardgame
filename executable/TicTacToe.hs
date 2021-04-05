@@ -1,100 +1,29 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 module TicTacToe where
 
-import Data.Graph as Graph (Graph, buildG, path, vertices, indegree, scc, edges)
-import Data.List (
-    elemIndex
-  , find
-  , findIndex
-  , intersect
-  , nub
-  , intercalate
-  , partition
-  , subsequences
-  )
+import Data.List (intercalate)
+  
 import Data.Map (
     Map
-  , assocs
-  , elems
-  , keys
-  , fromDistinctAscList
-  , fromList
   , insert
-  , lookup
   , member
+  , elems
+  , lookup
   , (!)
-  , adjust
-  , alter
-  , empty
+  , fromDistinctAscList
   )
-import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
+
+import Prelude hiding (lookup)
 
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
-  , mapPosition
-  , isOccupied
   , patternMatchingGameOver
-  , playIO
-  , takeEmptyMakeMove
-  , nextPlayer
-  , drawIf
-  , ifNotThen
-  , player1WinsIf
-  , player2WinsIf
-  , criteria
-  , symmetric
-  , player1LosesIf
-  , unless
-  , makerBreakerGameOver
   )
-
-import System.IO (hFlush, stdout)
-import Prelude hiding (lookup)
-import Control.Applicative ((<|>))
-import Data.Tuple (swap)
-import qualified Data.Array ((!))
-import Data.Foldable (toList)
-import Data.Bifunctor (Bifunctor(second))
-
-import Math.Geometry.Grid as Grid ()
-import Math.Geometry.Grid.Hexagonal ()
-import Boardgame.ColoredGraph (
-    ColoredGraph
-  , ColoredGraphTransformer(..)
-  , paraHexGraph
-  , values
-  , anyConnections
-  , mapValues
-  , filterValues
-  , filterEdges
-  , filterG
-  , components
-  , hexHexGraph
-  , mapEdges
-  , rectOctGraph
-  , inARow
-  , completeGraph
-  , filterEdges
-  , triHexGraph
-  , winningSetPaths
-  , coloredGraphVertexPositions
-  , coloredGraphGetVertexPosition
-  , coloredGraphSetVertexPosition
-  , coloredGraphEdgePositions
-  , coloredGraphGetEdgePosition
-  , coloredGraphSetBidirectedEdgePosition
-  )
-import Data.Bifunctor (bimap)
-import Control.Monad (forM, forM_)
-import Data.Tree (Tree, foldTree)
 
 -------------------------------------------------------------------------------
 -- * TicTacToe

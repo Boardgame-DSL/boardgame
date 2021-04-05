@@ -14,7 +14,7 @@ import Boardgame.Web (addWebGame, webReady)
 #endif
 
 -- Import all board games
---import ArithmeticProgressionGame
+import ArithmeticProgressionGame
 import ConnectFour
 import Cross
 import Gale
@@ -59,7 +59,7 @@ main = do
   hFlush stdout
   case choice of
     1 -> playIO emptyTicTacToe
-    --2 -> playAPG
+    2 -> playAPG
     3 -> playIO $ createShannonSwitchingGame 5
     4 -> playIO emptyGale
     5 -> playIO $ emptyHex 5
@@ -73,7 +73,7 @@ main = do
     13 -> playIO wikipediaReplica
     _ -> putStrLn "Invalid choice!"
 
-{-
+
 playAPG :: IO ()
 playAPG = do
   putStr "n: "
@@ -85,5 +85,4 @@ playAPG = do
   case createArithmeticProgressionGame n k of
     Just a -> playIO a
     Nothing -> putStrLn "Not valid input (n < k)"
-    -}
 #endif
