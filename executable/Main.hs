@@ -73,7 +73,6 @@ main = do
     13 -> playIO wikipediaReplica
     _ -> putStrLn "Invalid choice!"
 
-
 playAPG :: IO ()
 playAPG = do
   putStr "n: "

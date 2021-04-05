@@ -54,9 +54,6 @@ import Boardgame.ColoredGraph (
 
 data Hex = Hex Int (ColoredGraph (Int, Int) Position (Int, Int))
 
-emptyHex :: Int -> Hex
-emptyHex n = Hex n $ paraHexGraph n
-
 instance Show Hex where
   show (Hex n b) =
     replicate (2*(n-1)) ' ' ++ concat (replicate n "  _ ") ++ "\n"
@@ -102,14 +99,14 @@ instance PositionalGame Hex (Int, Int) where
       top    = [(i,  0) | i <- [0..n-1]]
       bottom = [(i,n-1) | i <- [0..n-1]]
 
+emptyHex :: Int -> Hex
+emptyHex n = Hex n $ paraHexGraph n
+
 -------------------------------------------------------------------------------
 -- * Hex2
 -------------------------------------------------------------------------------
 
 data Hex2 = Hex2 Int (ColoredGraph (Int, Int) Position (Int, Int))
-
-emptyHex2 :: Int -> Hex2
-emptyHex2 n = Hex2 n $ paraHexGraph n
 
 instance Show Hex2 where
   show (Hex2 n b) =
@@ -143,3 +140,6 @@ allWinningHexPaths n = winningSetPaths (paraHexGraph n) left right
   where
     left   = [(0,  i) | i <- [0..n-1]]
     right  = [(n-1,i) | i <- [0..n-1]]
+
+emptyHex2 :: Int -> Hex2
+emptyHex2 n = Hex2 n $ paraHexGraph n

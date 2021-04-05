@@ -108,20 +108,20 @@ class PositionalGame a c | a -> c where
   makeMove :: a -> Player -> c -> Maybe a
   makeMove = takeEmptyMakeMove
   -- | Takes the "current" state and checks if the game is over, in which case
-  --   the victorious player is returned or nothing in case of a draw.
+  --   the victorious player is returned or 'Draw' in case of a draw.
   --
-  -- > Nothing       -- Continue the game
-  -- > Just (Just p) -- Player p won
-  -- > Just Nothing  -- Draw
+  -- >  Nothing    -- Continue the game
+  -- >  Win Player -- Player p won
+  -- >  Draw       -- Draw
   gameOver :: a -> Maybe Outcome
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Position]
-  -- | Returns which player (or nothing) has taken the position at the given
+  -- | Returns which player (or Empty) has taken the position at the given
   --   coordinate, or 'Nothing' if the given coordinate is invalid.
   --
-  -- > Nothing       -- Invalid position
-  -- > Just (Just p) -- Player p owns this position
-  -- > Just Nothing  -- This position is empty
+  -- > Nothing         -- Invalid position
+  -- > Occupied Player -- Player p owns this position
+  -- > Empty           -- This position is empty
   getPosition :: a -> c -> Maybe Position
   -- | Takes the position at the given coordinate for the given player and
   --   returns the new state, or 'Nothing' if the given coordinate is invalid.
@@ -144,7 +144,7 @@ patternMatchingGameOver patterns a = case find isOccupied $ map (reduceHomogeneo
     Just (Occupied winner) -> Just $ Win winner
     Just Empty          -> Just Draw
   where
-    -- | Returns an element of the homogeneous list, or 'Nothing'.
+    -- | Returns an element of the homogeneous list, or 'Empty'.
     reduceHomogeneousList :: [Position] -> Position
     reduceHomogeneousList []     = Empty
     reduceHomogeneousList (x:xs) = if all (== x) xs then x else Empty
