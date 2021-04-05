@@ -5,6 +5,7 @@
 module Hex where
 
 import Data.List (intercalate)
+
 import Data.Map (
     Map
   , lookup
@@ -13,7 +14,7 @@ import Data.Map (
   )
 
 import Prelude hiding (lookup)
-import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
+import Data.Maybe (fromJust)
 
 #ifdef WASM
 import qualified Data.Vector as V ((!), fromList)
@@ -25,7 +26,6 @@ import Boardgame.Web (addWebGame, webReady)
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
   , takeEmptyMakeMove
   , player1WinsIf
@@ -76,7 +76,7 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
                           ] where
   showP (Occupied Player1) = "1"
   showP (Occupied Player2) = "2"
-  showP Empty           = " "
+  showP Empty              = " "
   rowOffset = replicate (2*(n-y-1)) ' '
   tileTop = concat $ replicate n " / \\"
 
@@ -120,7 +120,7 @@ instance Show Hex2 where
     "\n" ++ concat (replicate n " \\_/")
 
 gridShowLine2 :: Hex2 -> Int -> [String]
-gridShowLine2 (Hex2 n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
+gridShowLine2 (Hex2 n b) y = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
                           ,rowOffset ++ "| " ++ intercalate " | " (map (\x -> showP $ fst $ fromJust $ lookup (x, n-1-y) b) [0..(n-1)]) ++ " |"
                           ] where
   showP (Occupied Player1) = "1"
@@ -130,8 +130,8 @@ gridShowLine2 (Hex2 n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   tileTop = concat $ replicate n " / \\"
 
 instance PositionalGame Hex2 (Int, Int) where
-  getPosition (Hex2 n b) c = fst <$> lookup c b
-  positions (Hex2 n b) = values b
+  positions   (Hex2 n b)     = values b
+  getPosition (Hex2 n b) c   = fst <$> lookup c b
   setPosition (Hex2 n b) c p = if member c b
     then Just $ Hex2 n $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing

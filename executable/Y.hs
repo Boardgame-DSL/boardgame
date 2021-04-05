@@ -17,7 +17,6 @@ import Data.Map (
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
   , mapPosition
   , takeEmptyMakeMove
@@ -28,7 +27,6 @@ import Boardgame (
 
 import Boardgame.ColoredGraph (
     ColoredGraph
-  , ColoredGraphTransformer(..)
   , values
   , anyConnections
   , mapValues
@@ -47,8 +45,8 @@ instance Show Y where
   show (Y b) = show b
 
 instance PositionalGame Y (Int, Int) where
-  getPosition (Y b) c = fst <$> lookup c b
-  positions (Y b) = values b
+  positions   (Y b)     = values b
+  getPosition (Y b) c   = fst <$> lookup c b
   setPosition (Y b) c p = if member c b
     then Just $ Y $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing

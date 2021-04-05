@@ -20,7 +20,7 @@ import Data.Map (
   , empty
   )
   
-import Data.Maybe (fromJust, isJust, fromMaybe, mapMaybe)
+import Data.Maybe (fromJust)
 
 import Boardgame (
     Player(..)
@@ -78,8 +78,8 @@ instance Show ShannonSwitchingGame where
       showV Empty           = "│"
 
 instance PositionalGame ShannonSwitchingGame (Int, Int) where
-  getPosition (ShannonSwitchingGame (_, l)) c = snd <$> find ((== c) . fst) l
-  positions (ShannonSwitchingGame (_, l)) = map snd l
+  positions   (ShannonSwitchingGame (_, l))     = map snd l
+  getPosition (ShannonSwitchingGame (_, l)) c   = snd <$> find ((== c) . fst) l
   setPosition (ShannonSwitchingGame (n, l)) c p = case findIndex ((== c) . fst) l of
     Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, p) : drop (i + 1) l)
     Nothing -> Nothing

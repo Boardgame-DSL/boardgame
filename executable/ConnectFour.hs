@@ -4,6 +4,8 @@
 
 module ConnectFour where
 
+import Prelude hiding (lookup)
+
 import Data.Map (
     Map
   , lookup
@@ -11,12 +13,9 @@ import Data.Map (
   , adjust
   )
 
-import Prelude hiding (lookup)
-
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
   , mapPosition
   , player1WinsIf
@@ -50,12 +49,12 @@ instance Show ConnectFour where
   show (ConnectFour k b) = show b
 
 instance PositionalGame ConnectFour (Int, Int) where
-  getPosition (ConnectFour k b) c = fst <$> lookup c b
-  positions   (ConnectFour k b) = values b
+  positions   (ConnectFour k b)     = values b
+  getPosition (ConnectFour k b) c   = fst <$> lookup c b
   setPosition (ConnectFour k b) c p = if member c b
     then Just $ ConnectFour k $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing
-  makeMove = newMakeMove
+  makeMove = cfMove
 
   gameOver (ConnectFour k b) = criterion b
     where
@@ -69,12 +68,10 @@ instance PositionalGame ConnectFour (Int, Int) where
 
       directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
 
--- | Restrict move.
---   Move is only valid if the positon is empty and the position below is occupied.
-  -- (row, col)    = Nothing
-  -- (row, col-1) /= Nothing
-newMakeMove :: ConnectFour -> Player -> (Int, Int) -> Maybe ConnectFour
-newMakeMove a p coord = case getPosition a coord of
+-- Restrict move for Connect Four.
+-- Move is only valid if the positon is empty and the position below is occupied.
+cfMove :: ConnectFour -> Player -> (Int, Int) -> Maybe ConnectFour
+cfMove a p coord = case getPosition a coord of
   -- If we are at bottom row, we can place the piece there.
   Just Empty -> if ((fst coord) == 0)
                     then setPosition a coord (Occupied p)

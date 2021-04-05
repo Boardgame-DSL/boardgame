@@ -4,12 +4,9 @@
 
 module Havannah where
 
-import Prelude hiding (lookup)
-
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
   , mapPosition
   , isOccupied
@@ -49,7 +46,7 @@ instance Show Havannah where
   show (Havannah b) = show b
 
 instance PositionalGame Havannah (Int, Int) where
-  positions = coloredGraphVertexPositions
+  positions   = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition = coloredGraphSetVertexPosition
   gameOver (Havannah b) = criterion b

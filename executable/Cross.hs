@@ -1,10 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-
 module Cross where
 
-import Data.List ( intersect)
+import Data.List (intersect)
 import Prelude hiding (lookup)  
 
 import Data.Map (
@@ -19,7 +18,6 @@ import Data.Map (
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
   , mapPosition
   , isOccupied
@@ -35,7 +33,6 @@ import Boardgame (
 
 import Boardgame.ColoredGraph (
     ColoredGraph
-  , ColoredGraphTransformer(..)
   , values
   , mapValues
   , anyConnections
@@ -54,8 +51,8 @@ instance Show Cross where
   show (Cross b) = show b
 
 instance PositionalGame Cross (Int, Int) where
-  getPosition (Cross b) c = fst <$> lookup c b
-  positions (Cross b) = values b
+  positions   (Cross b)     = values b
+  getPosition (Cross b) c   = fst <$> lookup c b
   setPosition (Cross b) c p = if member c b
     then Just $ Cross $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing

@@ -5,6 +5,7 @@ module Gale where
 
 import Data.Graph as Graph (Graph, buildG, path)
 import Data.List (intercalate)
+import Prelude hiding (lookup)
 
 import Data.Map (
     Map
@@ -25,7 +26,7 @@ import Boardgame (
   , isOccupied
   )
 
-import Prelude hiding (lookup)
+
 
 -------------------------------------------------------------------------------
 -- * Gale

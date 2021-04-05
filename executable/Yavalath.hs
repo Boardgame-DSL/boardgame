@@ -7,7 +7,6 @@ module Yavalath where
 import Boardgame (
     Player(..)
   , Position(..)
-  , Outcome(..)
   , PositionalGame(..)
   , mapPosition
   , isOccupied
@@ -46,7 +45,7 @@ instance Show Yavalath where
   show (Yavalath b) = show b
 
 instance PositionalGame Yavalath (Int, Int) where
-  positions = coloredGraphVertexPositions
+  positions   = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition = coloredGraphSetVertexPosition
   gameOver (Yavalath b) = criterion b
