@@ -149,11 +149,11 @@ rectOctGraph m n = Map.fromList ((\z -> (z , (Empty, Map.fromList $ filter ((\(i
 -- | Creates a triangular shaped graph of hexagon vertices (each vertex has
 --   six outgoing edges) with the given side length.
 --
---   The "coordinates" of the graph will be '(Int, Int)' where '(0, 0)' the top
---   left vertex. The color of edges will also be a '(Int, Int)' tuple that
---   shows the "direction" of the edge.
+--   The "coordinates" of the graph will be '(Int, Int)' where '(1, n-1)',
+--   '(n-1, 1)' and '(n-1, n-1)' are the 3 corners. The color of edges will
+--   also be a '(Int, Int)' tuple that shows the "direction" of the edge.
 triHexGraph :: Int -> ColoredGraph (Int, Int) Position (Int, Int)
-triHexGraph n = Map.fromList ((\z -> (z, (Empty, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . snd) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 7]))) <$> nodes)
+triHexGraph n = Map.fromList ((\z -> (z, (Empty, Map.fromList $ filter ((\(i, j) -> i < n && i >= 0 && j < n && j >= 0 && i + j >= n) . fst) $ (\i -> (hexNeighbors z !! i, hexDirections !! i)) <$> [0 .. 5]))) <$> nodes)
   where
     nodes :: [Coordinate]
     nodes = [(i, j) | i <- [0 .. n -1], j <- [0 .. n -1], i + j >= n]
@@ -161,7 +161,6 @@ triHexGraph n = Map.fromList ((\z -> (z, (Empty, Map.fromList $ filter ((\(i, j)
 -- | Creates a complete graph with n vertices.
 completeGraph :: Int -> ColoredGraph Int () ()
 completeGraph n = Map.fromList [ (i, ((), Map.fromList [(j, ()) | j <- [0..n-1], i /= j])) | i <- [0..n-1]]
-
 
 
 
