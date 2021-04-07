@@ -65,7 +65,7 @@ main = do
     5 -> playIO $ emptyHex 5
     6 -> playIO $ emptyHavannah 8
     7 -> playIO $ emptyYavalath 8
-    8 -> playIO $ emptyCross 8
+    8 -> playIO $ emptyY 8
     9 -> playIO $ emptyCross 8
     10 -> playIO $ emptyHex2 5
     11 -> playIO $ emptyMNKGame 3 3 3

@@ -85,12 +85,12 @@ instance PositionalGame Cross (Int, Int) where
         ]
       emptyNeighbours xs = keys $ filterG (null . intersect xs . elems . snd) b
 
-      side1 = emptyNeighbours [dirs !! 0, dirs !! 1, dirs !! 2]
-      side2 = emptyNeighbours [dirs !! 1, dirs !! 2, dirs !! 3]
-      side3 = emptyNeighbours [dirs !! 2, dirs !! 3, dirs !! 4]
-      side4 = emptyNeighbours [dirs !! 3, dirs !! 4, dirs !! 5]
-      side5 = emptyNeighbours [dirs !! 4, dirs !! 5, dirs !! 0]
-      side6 = emptyNeighbours [dirs !! 5, dirs !! 0, dirs !! 1]
+      side1 = emptyNeighbours [dirs !! 0, dirs !! 1]
+      side2 = emptyNeighbours [dirs !! 1, dirs !! 2]
+      side3 = emptyNeighbours [dirs !! 2, dirs !! 3]
+      side4 = emptyNeighbours [dirs !! 3, dirs !! 4]
+      side5 = emptyNeighbours [dirs !! 4, dirs !! 5]
+      side6 = emptyNeighbours [dirs !! 5, dirs !! 0]
 
 emptyCross :: Int -> Cross
 emptyCross = Cross . hexHexGraph
