@@ -21,8 +21,8 @@ import Boardgame (
   , mapPosition
   , takeEmptyMakeMove
   , nextPlayer
-  , player1WinsIf
   , symmetric
+  , player1WinsWhen
   )
 
 import Boardgame.ColoredGraph (
@@ -58,7 +58,7 @@ instance PositionalGame Y (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ mapPosition nextPlayer) $
-        player1WinsIf $ anyConnections (==3) [side1, side2, side3] . filterValues (== Occupied Player1)
+        player1WinsWhen $ anyConnections (==3) [side1, side2, side3] . filterValues (== Occupied Player1)
 
       dirs :: [(Int, Int)]
       dirs =
@@ -77,4 +77,3 @@ instance PositionalGame Y (Int, Int) where
 
 emptyY :: Int -> Y
 emptyY = Y . triHexGraph
-

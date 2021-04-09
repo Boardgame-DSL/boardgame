@@ -88,9 +88,9 @@ instance PositionalGame Gale (Integer, Integer) where
   setPosition (Gale b) (x, y) p = if x `rem` 2 == y `rem` 2 && member c b then Just $ Gale $ insert c p b else Nothing
     where c = (x `div` 2, y)
   gameOver (Gale b)
-    | path player1Graph (-1) (-2) = Just $ Win Player1
-    | path player2Graph (-1) (-2) = Just $ Win Player2
-    | all isOccupied (elems b) = Just Draw
+    | path player1Graph (-1) (-2) = Just (Win Player1, [])
+    | path player2Graph (-1) (-2) = Just (Win Player2, [])
+    | all isOccupied (elems b) = Just (Draw, [])
     | otherwise            = Nothing
     where
       playerGraph from to p = buildG (-2, 19) $

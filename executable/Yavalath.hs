@@ -12,11 +12,11 @@ import Boardgame (
   , isOccupied
   , nextPlayer
   , drawIf
-  , player1WinsIf
   , criteria
   , symmetric
-  , player1LosesIf
   , unless
+  , player1LosesWhen
+  , player1WinsWhen
   )
 
 import Boardgame.ColoredGraph (
@@ -45,7 +45,7 @@ instance Show Yavalath where
   show (Yavalath b) = show b
 
 instance PositionalGame Yavalath (Int, Int) where
-  positions   = coloredGraphVertexPositions
+  positions = coloredGraphVertexPositions
   getPosition = coloredGraphGetVertexPosition
   setPosition = coloredGraphSetVertexPosition
   gameOver (Yavalath b) = criterion b
@@ -58,8 +58,8 @@ instance PositionalGame Yavalath (Int, Int) where
         -- Player1 looses if he has 3 in a row but wins if he has 4 or more in a row.
         -- It's important we use `unless` here because otherwise we could have conflicting
         -- outcomes from having both 3 in a row and 4 in a row at the same time.
-        (criteria (player1LosesIf . inARow (==3) <$> directions) . filterValues (== Occupied Player1) `unless`
-        criteria (player1WinsIf . inARow (>=4) <$> directions) . filterValues (== Occupied Player1))
+        (criteria (player1LosesWhen . inARow (==3) <$> directions) . filterValues (== Occupied Player1) `unless`
+        criteria (player1WinsWhen . inARow (>=4) <$> directions) . filterValues (== Occupied Player1))
 
       directions = ["vertical", "diagonal1", "diagonal2"]
 

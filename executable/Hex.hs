@@ -28,10 +28,10 @@ import Boardgame (
   , Position(..)
   , PositionalGame(..)
   , takeEmptyMakeMove
-  , player1WinsIf
-  , player2WinsIf
   , criteria
   , makerBreakerGameOver
+  , player1WinsWhen
+  , player2WinsWhen
   )
 
 import Boardgame.ColoredGraph (
@@ -90,9 +90,9 @@ instance PositionalGame Hex (Int, Int) where
       criterion =
         criteria
           -- There is a connection between 2 components, the left and right.
-          [ player1WinsIf (anyConnections (==2) [left, right]) . filterValues (== Occupied Player1)
+          [ player1WinsWhen (anyConnections (==2) [left, right]) . filterValues (==Occupied Player1)
            -- There is a connection between 2 components, the top and bottom.
-          , player2WinsIf (anyConnections (==2) [top, bottom]) . filterValues (== Occupied Player2)
+          , player2WinsWhen (anyConnections (==2) [top, bottom]) . filterValues (==Occupied Player2)
           ]
       left   = [(0,  i) | i <- [0..n-1]]
       right  = [(n-1,i) | i <- [0..n-1]]

@@ -30,7 +30,7 @@ module Boardgame.ColoredGraph (
   , coloredGraphSetBidirectedEdgePosition
 ) where
 
-import Data.Map (Map)
+import Data.Map (Map, mapMaybeWithKey, filterWithKey)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -167,6 +167,7 @@ completeGraph n = Map.fromList [ (i, ((), Map.fromList [(j, ()) | j <- [0..n-1],
 
 
 
+
 -- Returns the first value that is accepted by the predicate, or 'Nothing'.
 firstJust :: (a -> Maybe b) -> [a] -> Maybe b
 firstJust f = listToMaybe . mapMaybe f
@@ -247,17 +248,47 @@ component  g = fst . component' Set.empty  g
 values :: ColoredGraph i a b -> [a]
 values = fmap fst . Map.elems
 
+-- | Returns a graph formed from a subset of vertices and
+--   all edges connecting those vertices in the original graph.
+inducedSubgraph :: Eq i => ColoredGraph i a b -> [i] -> ColoredGraph i a b
+inducedSubgraph g nodes = mapMaybeWithKey tmp g
+  where
+    tmp i (a, xs) = if i `elem` nodes
+      then Just (a, filterWithKey (const . flip elem nodes) xs)
+      else Nothing
+
 -- | For every component of G, count how many groups of nodes they overlap with
 --   and check if the predicate holds on the count. If it matches on any
---   component then return true. Otherwise return false.
-anyConnections :: Ord i => (Int -> Bool) -> [[i]] -> ColoredGraph i a b -> Bool
-anyConnections pred groups g = any (\z -> pred $ length $ filter (not . Prelude.null . intersect z) groups) $ components g
-
+--   component then return that component. We also try to return only the parts
+--   of the component that are necessary for our predicate to hold.
+anyConnections :: Ord i => (Int -> Bool) -> [[i]] -> ColoredGraph i a b -> Maybe [i]
+anyConnections pred groups = findComponent cond
+  where
+    cond z = pred $ length $ filter (not . Prelude.null . intersect z) groups
 
 -- | Is there a component along edges with value `dir` that has a length
---   accepted by `pred`.
-inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Bool
-inARow pred dir = any (pred . length) . components . filterEdges (==dir)
+--   accepted by `pred`? If there is we return a subset of that component that
+--   matches the predicate
+inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Maybe [i]
+inARow pred dir = findComponent (pred . length) . filterEdges (==dir)
+
+-- | Try to find a component of the graph that matches the predicate.
+--   The component that is returned is minimized using a greedy
+--   search while still matching our predicate.
+findComponent :: Ord i => ([i] -> Bool) -> ColoredGraph i a b -> Maybe [i]
+findComponent pred g = minimizeComponent <$> find pred (components g)
+  where
+    -- Remove elements from xs while the condition holds.
+    minimizeComponent xs = maybe xs minimizeComponent $ find cond $ oneRemoved xs
+      where
+        -- The condition we want to hold is our
+        -- predicate and that we only have one component.
+        cond z = pred z && 1 == length (components $ inducedSubgraph g z)
+        -- Lists where we have removed one element from the input.
+        oneRemoved :: [i] -> [[i]]
+        oneRemoved [] = []
+        oneRemoved [x] = [[]]
+        oneRemoved (x:xs) = xs : ((x:) <$> oneRemoved xs)
 
 -- | Returns the winning sets representing paths from one set of nodes to
 --   another on a graph.

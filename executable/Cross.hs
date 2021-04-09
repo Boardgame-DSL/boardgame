@@ -24,11 +24,11 @@ import Boardgame (
   , takeEmptyMakeMove
   , nextPlayer
   , drawIf
-  , player1WinsIf
-  , player1LosesIf
   , criteria
   , symmetric
   , unless
+  , player1LosesWhen
+  , player1WinsWhen
   )
 
 import Boardgame.ColoredGraph (
@@ -65,12 +65,12 @@ instance PositionalGame Cross (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ mapPosition nextPlayer)
-        (criteria (player1LosesIf <$> -- you lose if you have connected 2 opposite sides.
+        (criteria (player1LosesWhen <$> -- you lose if you have connected 2 opposite sides.
           [ anyConnections (==2) [side1, side4] . filterValues (== Occupied Player1)
           , anyConnections (==2) [side2, side5] . filterValues (== Occupied Player1)
           , anyConnections (==2) [side3, side6] . filterValues (== Occupied Player1)
           ]) `unless`
-        criteria (player1WinsIf <$> -- you win if you have connected 3 non-adjacent sides.
+        criteria (player1WinsWhen <$> -- you win if you have connected 3 non-adjacent sides.
           [ anyConnections (==3) [side1, side3, side5] . filterValues (== Occupied Player1)
           , anyConnections (==3) [side2, side4, side6] . filterValues (== Occupied Player1)
           ]))
@@ -94,4 +94,3 @@ instance PositionalGame Cross (Int, Int) where
 
 emptyCross :: Int -> Cross
 emptyCross = Cross . hexHexGraph
-

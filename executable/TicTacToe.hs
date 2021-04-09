@@ -25,6 +25,11 @@ import Boardgame (
   , patternMatchingGameOver
   )
 
+#ifdef WASM
+import qualified Data.Vector as V ((!), fromList)
+import Data.Aeson.Types
+#endif
+
 -------------------------------------------------------------------------------
 -- * TicTacToe
 -------------------------------------------------------------------------------

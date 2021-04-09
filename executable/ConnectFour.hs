@@ -18,13 +18,13 @@ import Boardgame (
   , Position(..)
   , PositionalGame(..)
   , mapPosition
-  , player1WinsIf
   , criteria
   , isOccupied
   , nextPlayer
   , drawIf
   , symmetric
   , unless
+  , player1WinsWhen
   )
 
 import Boardgame.ColoredGraph (
@@ -64,7 +64,7 @@ instance PositionalGame ConnectFour (Int, Int) where
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ mapPosition nextPlayer)
         -- Player1 wins if there are k or more pieces in a row in any direction.
-        (criteria (player1WinsIf . inARow (>=k) <$> directions) . filterValues (== Occupied Player1))
+        (criteria (player1WinsWhen . inARow (>=k) <$> directions) . filterValues (== Occupied Player1))
 
       directions = ["vertical", "horizontal", "diagonal1", "diagonal2"]
 

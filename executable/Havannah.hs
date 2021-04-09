@@ -12,10 +12,10 @@ import Boardgame (
   , isOccupied
   , nextPlayer
   , drawIf
-  , player1WinsIf
   , criteria
   , symmetric
   , unless
+  , player1WinsWhen
   )
 
 import Boardgame.ColoredGraph (
@@ -56,7 +56,7 @@ instance PositionalGame Havannah (Int, Int) where
         -- Here we say that in any position where one player wins,
         -- the other player would win instead if the pieces were swapped.
         symmetric (mapValues $ mapPosition nextPlayer)
-        (criteria (player1WinsIf <$> -- Player1 wins if any of these 3 criteria are satisfied.
+        (criteria (player1WinsWhen <$> -- Player1 wins if any of these 3 criteria are satisfied.
             -- Player1 has connected 2 corners.
           [ anyConnections (>=2) corners . filterValues (== Occupied Player1)
             -- player1 has connecteed 3 edges (excluding the corners).
@@ -70,4 +70,3 @@ instance PositionalGame Havannah (Int, Int) where
 
 emptyHavannah :: Int -> Havannah
 emptyHavannah = Havannah . mapEdges (const ()) . hexHexGraph
-

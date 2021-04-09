@@ -20,7 +20,11 @@ import Data.Map (
   , empty
   )
   
-import Data.Maybe (fromJust)
+import Data.Maybe (
+    fromJust
+  , isJust
+  , isNothing
+  )
 
 import Boardgame (
     Player(..)
@@ -84,9 +88,9 @@ instance PositionalGame ShannonSwitchingGame (Int, Int) where
     Just i -> Just $ ShannonSwitchingGame (n, take i l ++ (c, p) : drop (i + 1) l)
     Nothing -> Nothing
   gameOver (ShannonSwitchingGame (n, l))
-    | path g 0 (n * n - 1) = Just $ Win Player1
-    | path g (n - 1) (n * n - n) = Just $ Win Player2
-    | all (isOccupied . snd) l = Just Draw
+    | path g 0 (n * n - 1) = Just (Win Player1, [])
+    | path g (n - 1) (n * n - n) = Just (Win Player2, [])
+    | all (isOccupied . snd) l = Just (Draw, [])
     | otherwise = Nothing
     where
       g = buildG (0, n * n - 1) (map fst $ filter ((== Occupied Player1) . snd) l)
@@ -115,8 +119,8 @@ instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
       ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
     where
-      winPath = anyConnections (==2) [[start], [goal]] . filterEdges (== Occupied Player1)
-      losePath = not . anyConnections (==2) [[start], [goal]] . filterEdges (/= Occupied Player2)
+      winPath  = isJust    . anyConnections (==2) [[start], [goal]] . filterEdges (== Occupied Player1)
+      losePath = isNothing . anyConnections (==2) [[start], [goal]] . filterEdges (/= Occupied Player2)
 
 createEmptyShannonSwitchingGameCG :: [(Int, Int)] -> Int -> Int -> ShannonSwitchingGameCG
 createEmptyShannonSwitchingGameCG pairs start goal = ShannonSwitchingGameCG{
