@@ -36,6 +36,18 @@ library
 
 executable boardgame
   main-is:             Main.hs
+  other-modules:
+      ArithmeticProgressionGame
+    , ConnectFour
+    , Cross
+    , Gale
+    , Havannah
+    , Hex
+    , MNKGame
+    , ShannonSwitchingGame
+    , TicTacToe
+    , Y
+    , Yavalath
   build-depends:
       base >=4.12
     , grid >= 7.8.14
