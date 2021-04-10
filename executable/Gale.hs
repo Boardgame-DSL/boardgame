@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -26,7 +27,9 @@ import Boardgame (
   , isOccupied
   )
 
-
+#ifdef WASM
+import Data.Aeson (ToJSON(..))
+#endif
 
 -------------------------------------------------------------------------------
 -- * Gale
@@ -80,6 +83,11 @@ instance Show Gale where
         | even y      = " \ESC[31m║ "
         | otherwise   = "\ESC[31m═══"
       showP Empty _   = "   "
+
+#ifdef WASM
+instance ToJSON Gale where
+  toJSON (Gale b) = toJSON b
+#endif
 
 instance PositionalGame Gale (Integer, Integer) where
   getPosition (Gale b) (x, y) = if x `rem` 2 == y `rem` 2 then lookup c b else Nothing

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -35,6 +36,10 @@ import Boardgame.ColoredGraph (
   , coloredGraphGetVertexPosition
   )
 
+#ifdef WASM
+import Data.Aeson (ToJSON(..))
+#endif
+
 -------------------------------------------------------------------------------
 -- * Havannah
 -------------------------------------------------------------------------------
@@ -44,6 +49,11 @@ newtype Havannah = Havannah (ColoredGraph (Int, Int) Position ())
 
 instance Show Havannah where
   show (Havannah b) = show b
+
+#ifdef WASM
+instance ToJSON Havannah where
+  toJSON (Havannah b) = toJSON b
+#endif
 
 instance PositionalGame Havannah (Int, Int) where
   positions   = coloredGraphVertexPositions

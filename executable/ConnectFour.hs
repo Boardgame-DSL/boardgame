@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
 
 module ConnectFour where
@@ -39,6 +40,14 @@ import Boardgame.ColoredGraph (
   , filterEdges
   )
 
+#ifdef WASM
+import Data.Aeson (
+    ToJSON(..)
+  , object
+  , (.=)
+  )
+#endif
+
 -------------------------------------------------------------------------------
 -- * Connect Four
 -------------------------------------------------------------------------------
@@ -47,6 +56,14 @@ data ConnectFour = ConnectFour Int (ColoredGraph (Int, Int) Position String)
 
 instance Show ConnectFour where
   show (ConnectFour k b) = show b
+
+#ifdef WASM
+instance ToJSON ConnectFour where
+  toJSON (ConnectFour k b) = object [
+      "k"     .= toJSON k
+    , "board" .= toJSON b
+    ]
+#endif
 
 instance PositionalGame ConnectFour (Int, Int) where
   positions   (ConnectFour k b)     = values b

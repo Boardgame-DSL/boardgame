@@ -26,8 +26,11 @@ import Boardgame (
   )
 
 #ifdef WASM
-import qualified Data.Vector as V ((!), fromList)
-import Data.Aeson.Types
+import qualified Data.Vector as V (fromList)
+import Data.Aeson (
+    ToJSON(..)
+  , Value(Array)
+  )
 #endif
 
 -------------------------------------------------------------------------------

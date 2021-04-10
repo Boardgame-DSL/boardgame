@@ -1,4 +1,6 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module ArithmeticProgressionGame where
 
@@ -10,6 +12,14 @@ import Boardgame (
   , PositionalGame(..)
   , patternMatchingGameOver
   )
+
+#ifdef WASM
+import Data.Aeson (
+    ToJSON(..)
+  , object
+  , (.=)
+  )
+#endif
 
 -------------------------------------------------------------------------------
 -- * Arithmetic Progression Game
@@ -30,6 +40,14 @@ instance Show ArithmeticProgressionGame where
       showP (Occupied Player1) = "  \ESC[34mO\ESC[0m"
       showP (Occupied Player2) = "  \ESC[31mX\ESC[0m"
       pad x = replicate (3 - length x) ' ' ++ x
+
+#ifdef WASM
+instance ToJSON ArithmeticProgressionGame where
+  toJSON (ArithmeticProgressionGame n ps) = object [
+      "n"         .= toJSON n
+    , "positions" .= toJSON ps
+    ]
+#endif
 
 instance PositionalGame ArithmeticProgressionGame Int where
   positions   (ArithmeticProgressionGame _ l)     = l

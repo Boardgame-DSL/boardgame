@@ -7,9 +7,7 @@ import Boardgame (playIO)
 import System.IO (hFlush, stdout)
 
 #ifdef WASM
-import qualified Data.Vector as V ((!), fromList)
-import Data.Aeson
-import Data.Aeson.Types
+import Data.Maybe (fromJust)
 import Boardgame.Web (addWebGame, webReady)
 #endif
 
@@ -33,8 +31,19 @@ import Yavalath
 #ifdef WASM
 main :: IO ()
 main = do
-  addWebGame "TicTacToe" $ emptyMNKGame 3 3 3
+  addWebGame "TicTacToe" emptyTicTacToe
+  addWebGame "Arithmetic Progression Game" $ fromJust $ createArithmeticProgressionGame 35 5
+  addWebGame "Shannon Switching Game" $ createShannonSwitchingGame 5
+  addWebGame "Gale" emptyGale
   addWebGame "Hex" $ emptyHex 5
+  addWebGame "Havannah" $ emptyHavannah 8
+  addWebGame "Yavalath" $ emptyYavalath 8
+  addWebGame "Y" $ emptyY 8
+  addWebGame "Cross" $ emptyCross 8
+  addWebGame "Hex (Alternative Version)" $ emptyHex2 5
+  addWebGame "TicTacToe (Alternative Version)" $ emptyMNKGame 3 3 3
+  addWebGame "Connect Four" $ emptyConnectFour 6 7 4
+  addWebGame "Shannon Switching Game (On a ColoredGraph)" $ wikipediaReplica
   webReady
 #else
 main :: IO ()

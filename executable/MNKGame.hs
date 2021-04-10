@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
 
 module MNKGame where
@@ -43,7 +44,11 @@ import Boardgame.ColoredGraph (
   )
 
 #ifdef WASM
-import Data.Aeson.Types
+import Data.Aeson (
+    ToJSON(..)
+  , object
+  , (.=)
+  )
 #endif
 
 -------------------------------------------------------------------------------
@@ -57,7 +62,10 @@ instance Show MNKGame where
 
 #if WASM
 instance ToJSON MNKGame where
-  toJSON (MNKGame _ b) = toJSON b
+  toJSON (MNKGame k b) = object [
+      "k"     .= toJSON k
+    , "board" .= toJSON b
+    ]
 #endif
 
 instance ColoredGraphTransformer (Int, Int) Position String MNKGame where

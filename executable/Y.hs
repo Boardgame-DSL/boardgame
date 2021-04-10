@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -35,6 +36,10 @@ import Boardgame.ColoredGraph (
   , triHexGraph
   )
 
+#ifdef WASM
+import Data.Aeson (ToJSON(..))
+#endif
+
 -------------------------------------------------------------------------------
 -- * Y
 -------------------------------------------------------------------------------
@@ -43,6 +48,11 @@ newtype Y = Y (ColoredGraph (Int, Int) Position (Int, Int))
 
 instance Show Y where
   show (Y b) = show b
+
+#ifdef WASM
+instance ToJSON Y where
+  toJSON (Y b) = toJSON b
+#endif
 
 instance PositionalGame Y (Int, Int) where
   positions   (Y b)     = values b

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
 
 module Hex where
@@ -17,10 +18,11 @@ import Prelude hiding (lookup)
 import Data.Maybe (fromJust)
 
 #ifdef WASM
-import qualified Data.Vector as V ((!), fromList)
-import Data.Aeson
-import Data.Aeson.Types
-import Boardgame.Web (addWebGame, webReady)
+import Data.Aeson (
+    ToJSON(..)
+  , object
+  , (.=)
+  )
 #endif
 
 import Boardgame (
@@ -64,7 +66,10 @@ instance Show Hex where
 
 #ifdef WASM
 instance ToJSON Hex where
-  toJSON (Hex _ m) = toJSON m
+  toJSON (Hex n b) = object [
+      "n"     .= toJSON n
+    , "board" .= toJSON b
+    ]
 #endif
 
 gridShowLine :: Hex -> Int -> [String]
@@ -115,6 +120,14 @@ instance Show Hex2 where
     intercalate "\n" [intercalate "\n" (gridShowLine2 (Hex2 n b) r) | r <- [0..n-1]]
     ++
     "\n" ++ concat (replicate n " \\_/")
+
+#ifdef WASM
+instance ToJSON Hex2 where
+  toJSON (Hex2 n b) = object [
+      "n"     .= toJSON n
+    , "board" .= toJSON b
+    ]
+#endif
 
 gridShowLine2 :: Hex2 -> Int -> [String]
 gridShowLine2 (Hex2 n b) y = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]

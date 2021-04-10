@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -41,6 +42,10 @@ import Boardgame.ColoredGraph (
   , hexHexGraph
   )
 
+#ifdef WASM
+import Data.Aeson (ToJSON(..))
+#endif
+
 -------------------------------------------------------------------------------
 -- * Cross
 -------------------------------------------------------------------------------
@@ -49,6 +54,11 @@ newtype Cross = Cross (ColoredGraph (Int, Int) Position (Int, Int))
 
 instance Show Cross where
   show (Cross b) = show b
+
+#ifdef WASM
+instance ToJSON Cross where
+  toJSON (Cross b) = toJSON b
+#endif
 
 instance PositionalGame Cross (Int, Int) where
   positions   (Cross b)     = values b
