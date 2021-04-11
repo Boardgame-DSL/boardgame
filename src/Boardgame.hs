@@ -226,7 +226,7 @@ play putState putTurn getMove putInvalidMove putGameOver startingState = putStat
 -- | Plays a 'PositionalGame' in the console by taking alternating input from
 --   the players. Requires that the game is an instance of 'Show' and that its
 --   coordinates are instances of 'Read'.
-playIO :: (Show a, Read c, PositionalGame a c) => a -> IO ()
+playIO :: (Show a, Show c, Read c, PositionalGame a c) => a -> IO ()
 playIO = play putState putTurn getMove putInvalidMove putGameOver
   where
     putState s = putStr "\ESC[s\ESC[0;0H" >> print s >> putStr "\ESC[u" >> hFlush stdout
@@ -238,8 +238,8 @@ playIO = play putState putTurn getMove putInvalidMove putGameOver
       Nothing -> putStr "Invalid input, try again: " >> hFlush stdout >> getMove
     putInvalidMove = putStr "Invalid move, try again: " >> hFlush stdout
     putGameOver = \case
-      (Win Player1, _) -> putStrLn "Player 1 won!" >> hFlush stdout
-      (Win Player2, _) -> putStrLn "Player 2 won!" >> hFlush stdout
+      (Win Player1, p) -> putStrLn "Player 1 won!" >> print p >> hFlush stdout
+      (Win Player2, p) -> putStrLn "Player 2 won!" >> print p >> hFlush stdout
       (Draw, _)      -> putStrLn "It's a draw!" >> hFlush stdout
 
 data CombinedPositionalGames a b i j = CombinedPositionalGames a b

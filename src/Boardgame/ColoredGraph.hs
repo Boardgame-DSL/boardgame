@@ -17,6 +17,7 @@ module Boardgame.ColoredGraph (
   , filterG
   , components
   , anyConnections
+  , edgePath
   , inARow
   , values
   , winningSetPaths
@@ -311,6 +312,11 @@ winningSetPaths' g allowed i goal = Node (False, i) $ (\k -> if fromJust $ Map.l
   where
     neighbourIndices = filter (fromJust . flip Map.lookup allowed) $ Map.keys $ snd $ fromJust $ Map.lookup i g
     allowed' = foldr (`Map.insert` False) allowed neighbourIndices
+
+-- | Takes a path of vertices and returns a path of edges. Where the edges are
+--   pairs of from and to vertices.
+edgePath :: [a] -> [(a, a)]
+edgePath a = zip a (tail a)
 
 -- | A standard implementation of 'MyLib.positions' for games
 --   with an underlying 'ColoredGraph' played on the vertices.
