@@ -2,6 +2,22 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+{-|
+Module:      Boardgame.ColoredGraph
+Description: A graph library specialized for boardgames. Colored graphs have
+             colors, or values, on each vertex and each edge.
+
+This module contains helper functions for games that can be modeled as graphs.
+
+It contains a few functions for creating graphs of different shapes and with
+different properties. 'hexHexGraph', 'paraHexGraph', 'rectOctGraph', and more.
+
+It also contains a few functions that can automatically implement
+'Boardgame.PositionalGame' for most cases. These are named after the function
+they implement, prefixed with @coloredGraph@ and the addition of how the
+implement them. For example 'coloredGraphGetVertexPosition' and
+'coloredGraphSetBidirectedEdgePosition'.
+-}
 module Boardgame.ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
