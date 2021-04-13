@@ -2,9 +2,75 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
-
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+
+{-|
+Module:      Boardgame
+Description: The main framework for creating boardgames.
+
+The main framework module for boardgames. Contains the 'PositionalGame' class
+implemented by all positional games, and a bunch of helper functions.
+
+The helper functions range from just that, simple helper functions such as
+'player1WinsWhen', to right out implementations of functions in the
+'PositionalGame's class, such as the 'takeEmptyMakeMove' functions.
+
+It also contains some functions for playing games. 'play' is the implementation
+agnostic skeleton code that you can use in any context. And 'playIO' uses
+'play' to play the games in the terminal.
+
+= TicTacToe as an example
+
+> -- TicTacToe is a
+> newtype TicTacToe = TicTacToe (Map (Integer, Integer) Position)
+>
+> -- Creates an empty TicTacToe board with coordinates @(0..2, 0..2)@
+> emptyTicTacToe = TicTacToe $
+>   fromDistinctAscList $
+>     zip
+>       [(x, y) | x <- [0..2], y <- [0..2]]
+>       (repeat Empty)
+>
+> instance Show TicTacToe where
+>   show (TicTacToe b) = intercalate "\n" [
+>       "╔═══╤═══╤═══╗"
+>     , "║ " ++ intercalate " │ " (row 0) ++ " ║"
+>     , "╟───┼───┼───╢"
+>     , "║ " ++ intercalate " │ " (row 1) ++ " ║"
+>     , "╟───┼───┼───╢"
+>     , "║ " ++ intercalate " │ " (row 2) ++ " ║"
+>     , "╚═══╧═══╧═══╝"
+>     ]
+>     where
+>       row y = map (\x -> showP $ b ! (x, y)) [0..2]
+>       showP (Occupied Player1) = "\ESC[34mo\ESC[0m"
+>       showP (Occupied Player2) = "\ESC[31mx\ESC[0m"
+>       showP Empty = " "
+>
+> instance PositionalGame TicTacToe (Integer, Integer) where
+>   -- Just looks up the coordinate in the underlying Map
+>   getPosition (TicTacToe b) = flip lookup b
+>   -- Just returns the elements in the underlying Map
+>   positions (TicTacToe b) = elems b
+>   -- If the underlying Map has the given coordinate, update it with the given player
+>   setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c p b else Nothing
+>   -- "Creates" a 'gameOver' function by supplying all the winning "patterns"
+>   gameOver = patternMatchingGameOver [
+>       [(0, 0), (0, 1), (0, 2)]
+>     , [(1, 0), (1, 1), (1, 2)]
+>     , [(2, 0), (2, 1), (2, 2)]
+>     , [(0, 0), (1, 0), (2, 0)]
+>     , [(0, 1), (1, 1), (2, 1)]
+>     , [(0, 2), (1, 2), (2, 2)]
+>     , [(0, 0), (1, 1), (2, 2)]
+>     , [(2, 0), (1, 1), (0, 2)]
+>     ]
+>   -- 'makeMove' is handled by the default implementation 'takeEmptyMakeMove'
+>
+> -- Plays the game in the terminal, takes @(x, y)@ as input
+> main = playIO emptyTicTacToe
+-}
 module Boardgame (
     Player(..)
   , Position(..)
