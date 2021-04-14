@@ -79,7 +79,10 @@ module Boardgame (
   , nextPlayer
   , mapPosition
   , isOccupied
+  , isEmpty
   , mapOutcome
+  , isWin
+  , isDraw
   , play
   , playerToInt
   , playIO
@@ -155,6 +158,11 @@ isOccupied :: Position -> Bool
 isOccupied (Occupied _) = True
 isOccupied Empty     = False
 
+-- | Checks if the position is empty or not.
+isEmpty :: Position -> Bool
+isEmpty (Occupied _) = False
+isEmpty Empty        = True
+
 -- | The 'Outcome' of a game. Either a 'Win' for one of the players, or a
 --   'Draw'.
 data Outcome = Win Player | Draw
@@ -171,6 +179,16 @@ instance ToJSON Outcome where
 mapOutcome :: (Player -> Player) -> Outcome -> Outcome
 mapOutcome f (Win p) = Win $ f p
 mapOutcome _ Draw    = Draw
+
+-- | Checks if the outcome is a victory or not.
+isWin :: Outcome -> Bool
+isWin (Win _) = True
+isWin Draw    = False
+
+-- | Checks if the outcome is a draw or not.
+isDraw :: Outcome -> Bool
+isDraw (Win _) = False
+isDraw Draw    = True
 
 -- | A type class for positional games where `a` is the game itself and `c` is
 --   its accompanying "coordinate" type.
