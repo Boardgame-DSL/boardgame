@@ -79,6 +79,7 @@ module Boardgame (
   , nextPlayer
   , mapPosition
   , isOccupied
+  , isEmpty
   , mapOutcome
   , play
   , playerToInt
@@ -154,6 +155,11 @@ mapPosition _ Empty     = Empty
 isOccupied :: Position -> Bool
 isOccupied (Occupied _) = True
 isOccupied Empty     = False
+
+-- | Checks if the position is empty or not.
+isEmpty :: Position -> Bool
+isEmpty (Occupied _) = False
+isEmpty Empty        = True
 
 -- | The 'Outcome' of a game. Either a 'Win' for one of the players, or a
 --   'Draw'.
