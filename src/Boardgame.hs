@@ -81,6 +81,7 @@ module Boardgame (
   , isOccupied
   , isEmpty
   , mapOutcome
+  , isWin
   , play
   , playerToInt
   , playIO
@@ -177,6 +178,11 @@ instance ToJSON Outcome where
 mapOutcome :: (Player -> Player) -> Outcome -> Outcome
 mapOutcome f (Win p) = Win $ f p
 mapOutcome _ Draw    = Draw
+
+-- | Checks if the outcome is a victory or not.
+isWin :: Outcome -> Bool
+isWin (Win _) = True
+isWin Draw    = False
 
 -- | A type class for positional games where `a` is the game itself and `c` is
 --   its accompanying "coordinate" type.
