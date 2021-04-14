@@ -82,6 +82,7 @@ module Boardgame (
   , isEmpty
   , mapOutcome
   , isWin
+  , isDraw
   , play
   , playerToInt
   , playIO
@@ -183,6 +184,11 @@ mapOutcome _ Draw    = Draw
 isWin :: Outcome -> Bool
 isWin (Win _) = True
 isWin Draw    = False
+
+-- | Checks if the outcome is a draw or not.
+isDraw :: Outcome -> Bool
+isDraw (Win _) = False
+isDraw Draw    = True
 
 -- | A type class for positional games where `a` is the game itself and `c` is
 --   its accompanying "coordinate" type.
