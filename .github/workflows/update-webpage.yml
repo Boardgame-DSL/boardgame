@@ -1,0 +1,44 @@
+name: Update Webpage
+
+on:
+  push:
+    branches: [ haddock ]
+
+jobs:
+  haddock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-haskell@v1
+        with:
+          ghc-version: '8.10.3'
+          cabal-version: '3.2'
+      - name: Cache
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-cabal
+        with:
+          path: ~/.cabal
+          key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('**/*.cabal')}}
+          restore-keys: |
+            ${{runner.os}}-${{env.cache-name}}-
+            ${{runner.os}}-
+      - name: Update dependencies
+        run: cabal new-update
+      - name: Build documentation
+        run: cabal new-haddock --haddock-quickjump
+      - name: Update Webpage
+        run: |
+          git clone https://github.com/Boardgame-DSL/Boardgame-DSL.github.io.git
+          cp -r ./dist-newstyle/build/*/ghc*/boardgame*/doc/html/boardgame/ ./Boardgame-DSL.github.io/haskell/
+      - name: Push Update
+        uses: actions-js/push@master
+        with:
+          github_token: ${{secrets.TOKEN}}
+          author_name: 'GitHub Actions Bot'
+          message: |
+            Updating Haskell documentation
+            Based on commit ${{github.repository}}#${{github.sha}}.
+          branch: 'main'
+          directory: './Boardgame-DSL.github.io'
+          repository: 'Boardgame-DSL/Boardgame-DSL.github.io'
