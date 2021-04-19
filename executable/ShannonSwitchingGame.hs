@@ -1,5 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -12,6 +14,8 @@ import Data.List (
     find
   , findIndex
   , intercalate
+  , subsequences
+  , sortOn
   )
 
 import Data.Map (
@@ -20,12 +24,15 @@ import Data.Map (
   , insert
   , alter
   , empty
+  , assocs
+  , keys
   )
   
 import Data.Maybe (
     fromJust
   , isJust
   , isNothing
+  , mapMaybe
   )
 
 import Boardgame (
@@ -35,14 +42,16 @@ import Boardgame (
   , PositionalGame(..)
   , isOccupied
   , ifNotThen
-  , player1WinsIf
-  , player1LosesIf
+  , player1WinsWhen
+  , player1LosesWhen
   )
 
 import Boardgame.ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
   , anyConnections
+  , edgePath
+  , mapEdges
   , filterEdges
   , coloredGraphEdgePositions
   , coloredGraphGetEdgePosition
@@ -145,10 +154,20 @@ instance PositionalGame ShannonSwitchingGameCG (Int, Int) where
   getPosition = coloredGraphGetEdgePosition
   setPosition = coloredGraphSetBidirectedEdgePosition
   gameOver ShannonSwitchingGameCG{ start, goal, graph } =
-      ifNotThen (player1WinsIf winPath) (player1LosesIf losePath) graph
+      ifNotThen (player1WinsWhen winPath) (player1LosesWhen losePath) graph
     where
-      winPath  = isJust    . anyConnections (==2) [[start], [goal]] . filterEdges (== Occupied Player1)
-      losePath = isNothing . anyConnections (==2) [[start], [goal]] . filterEdges (/= Occupied Player2)
+      winPath  = fmap edgePath . anyConnections (==2) [[start], [goal]] . filterEdges (== Occupied Player1)
+      losePath g = do
+        -- Gets the (from, to) coordinates of edges Occupied by Player2
+        let cut = assocs (filterEdges (== Occupied Player2) g) >>= \(f, (_, ts)) -> mapMaybe (\t -> if f <= t then Just (f, t) else Nothing) $ keys ts
+        -- Get all subsequences from shortest to longest
+        let ss = sortOn length $ subsequences cut
+        -- A ColoredGraph where all edges Occupied by Player2 are cleared
+        let clearedG = mapEdges (\case Occupied Player2 -> Empty; p -> p) g
+        -- Returns the first subsequence (the shortest) that successfully
+        -- prevent Player1 from winning
+        find (losePathTest . foldl (\g c -> fromJust $ coloredGraphSetBidirectedEdgePosition g c (Occupied Player2)) clearedG) ss
+      losePathTest = isNothing . anyConnections (==2) [[start], [goal]] . filterEdges (/= Occupied Player2)
 
 createEmptyShannonSwitchingGameCG :: [(Int, Int)] -> Int -> Int -> ShannonSwitchingGameCG
 createEmptyShannonSwitchingGameCG pairs start goal = ShannonSwitchingGameCG{
