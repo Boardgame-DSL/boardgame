@@ -10,7 +10,7 @@ import Boardgame (
     Player(..)
   , Position(..)
   , PositionalGame(..)
-  , patternMatchingGameOver
+  , makerMakerGameOver
   )
 
 #ifdef WASM
@@ -56,4 +56,4 @@ instance PositionalGame ArithmeticProgressionGame Int where
     then Just $ ArithmeticProgressionGame k (take (i - 1) l ++ p : drop i l)
     else Nothing
   gameOver a@(ArithmeticProgressionGame k l) = let n = length l
-    in patternMatchingGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a
+    in makerMakerGameOver (filter (all (<= n)) $ concat [[take k [i,i+j..] | j <- [1..n-i]] | i <- [1..n]]) a

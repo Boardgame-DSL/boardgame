@@ -56,7 +56,7 @@ agnostic skeleton code that you can use in any context. And 'playIO' uses
 >   -- If the underlying Map has the given coordinate, update it with the given player
 >   setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c p b else Nothing
 >   -- "Creates" a 'gameOver' function by supplying all the winning "patterns"
->   gameOver = patternMatchingGameOver [
+>   gameOver = makerMakerGameOver [
 >       [(0, 0), (0, 1), (0, 2)]
 >     , [(1, 0), (1, 1), (1, 2)]
 >     , [(2, 0), (2, 1), (2, 2)]
@@ -87,7 +87,7 @@ module Boardgame (
   , playerToInt
   , playIO
   , takeEmptyMakeMove
-  , patternMatchingGameOver
+  , makerMakerGameOver
   , drawIf
   , player1WinsIf
   , player2WinsIf
@@ -232,8 +232,8 @@ takeEmptyMakeMove a p coord = case getPosition a coord of
 --   a set of winning sets. A player is victorious when they "own" one of the
 --   winning sets. The game ends in a draw when all positions on the board are
 --   taken.
-patternMatchingGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Outcome, [c])
-patternMatchingGameOver patterns a = case find (isOccupied . fst) $ (\pat -> (, pat) $ reduceHomogeneousList (fromJust . getPosition a <$> pat)) <$> patterns of
+makerMakerGameOver :: (Eq c, PositionalGame a c) => [[c]] -> a -> Maybe (Outcome, [c])
+makerMakerGameOver patterns a = case find (isOccupied . fst) $ (\pat -> (, pat) $ reduceHomogeneousList (fromJust . getPosition a <$> pat)) <$> patterns of
     Nothing -> if all isOccupied (positions a) then Just (Draw, []) else Nothing
     Just (Occupied winner, coords) -> Just (Win winner, coords)
     Just (Empty, coords)           -> Just (Draw, coords)

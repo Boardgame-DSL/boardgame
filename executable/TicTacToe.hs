@@ -22,7 +22,7 @@ import Boardgame (
     Player(..)
   , Position(..)
   , PositionalGame(..)
-  , patternMatchingGameOver
+  , makerMakerGameOver
   )
 
 #ifdef WASM
@@ -84,7 +84,7 @@ instance PositionalGame TicTacToe (Integer, Integer) where
   -- If the underlying Map has the given coordinate, update it with the given player
   setPosition (TicTacToe b) c p = if member c b then Just $ TicTacToe $ insert c p b else Nothing
   -- "Creates" a `gameOver` function by supplying all the winning "patterns"
-  gameOver = patternMatchingGameOver [
+  gameOver = makerMakerGameOver [
       [(0, 0), (0, 1), (0, 2)]
     , [(1, 0), (1, 1), (1, 2)]
     , [(2, 0), (2, 1), (2, 2)]
