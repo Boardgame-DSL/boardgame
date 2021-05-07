@@ -40,6 +40,8 @@ import Boardgame.ColoredGraph (
   , filterValues
   , filterG
   , hexHexGraph
+  , missingDirections
+  , hexDirections
   )
 
 #ifdef WASM
@@ -85,22 +87,9 @@ instance PositionalGame Cross (Int, Int) where
           , anyConnections (==3) [side2, side4, side6] . filterValues (== Occupied Player1)
           ]))
 
-      dirs =
-        [ (1, 0)
-        , (1, -1)
-        , (0, -1)
-        , (-1, 0)
-        , (-1, 1)
-        , (0, 1)
-        ]
-      emptyNeighbours xs = keys $ filterG (null . intersect xs . elems . snd) b
-
-      side1 = emptyNeighbours [dirs !! 0, dirs !! 1]
-      side2 = emptyNeighbours [dirs !! 1, dirs !! 2]
-      side3 = emptyNeighbours [dirs !! 2, dirs !! 3]
-      side4 = emptyNeighbours [dirs !! 3, dirs !! 4]
-      side5 = emptyNeighbours [dirs !! 4, dirs !! 5]
-      side6 = emptyNeighbours [dirs !! 5, dirs !! 0]
+      -- A list of coordinates for every side based on which neighboring tiles are empty.
+      [side1, side2, side3, side4, side5, side6] =
+        missingDirections b <$> [[hexDirections !! i, hexDirections !! ((i+1) `mod` 6)] | i <- [0..5]]
 
 emptyCross :: Int -> Cross
 emptyCross = Cross . hexHexGraph

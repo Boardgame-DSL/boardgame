@@ -21,6 +21,8 @@ implement them. For example 'coloredGraphGetVertexPosition' and
 module Boardgame.ColoredGraph (
     ColoredGraph
   , ColoredGraphTransformer(..)
+  , hexDirections
+  , octoDirections
   , hexHexGraph
   , paraHexGraph
   , rectOctGraph
@@ -36,6 +38,8 @@ module Boardgame.ColoredGraph (
   , edgePath
   , inARow
   , values
+  , missingEdgeColors
+  , missingDirections
   , winningSetPaths
   , winningSetPaths'
   , coloredGraphVertexPositions
@@ -67,7 +71,7 @@ type ColoredGraph i a b = Map i (a, Map i b)
 
 type Coordinate = (Int, Int)
 
--- The six directions of neighbours on a hexagonal grid.
+-- | The six directions of neighbours on a hexagonal grid.
 hexDirections :: [Coordinate]
 hexDirections =
   [ (1, 0)
@@ -83,7 +87,7 @@ hexDirections =
 hexNeighbors :: Coordinate -> [Coordinate]
 hexNeighbors (i, j) = bimap (+ i) (+ j) <$> hexDirections
 
--- The eight directions of neighbours on a square grid.
+-- | The eight directions of neighbours on a square grid.
 octoDirections :: [Coordinate]
 octoDirections =
   [ (1, 0)
@@ -328,6 +332,15 @@ winningSetPaths' g allowed i goal = Node (False, i) $ (\k -> if fromJust $ Map.l
   where
     neighbourIndices = filter (fromJust . flip Map.lookup allowed) $ Map.keys $ snd $ fromJust $ Map.lookup i g
     allowed' = foldr (`Map.insert` False) allowed neighbourIndices
+
+-- | Returns all nodes avoiding all of the provided edge colors.
+missingEdgeColors :: (Ord i, Eq b) => ColoredGraph i a b -> [b] -> [i]
+missingEdgeColors g xs = Map.keys $ filterG (null . intersect xs . Map.elems . snd) g
+
+-- | A synonym for `missingEdgeColors` for cases where the color of an edge
+--   represents the direction of that edge.
+missingDirections :: (Ord i, Eq b) => ColoredGraph i a b -> [b] -> [i]
+missingDirections = missingEdgeColors
 
 -- | Takes a path of vertices and returns a path of edges. Where the edges are
 --   pairs of from and to vertices.
