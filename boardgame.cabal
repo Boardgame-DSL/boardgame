@@ -16,7 +16,7 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
 flag wasm
-  description:         Eanbles builds targeting WASM.
+  description:         Enables builds targeting WASM.
   default:             False
   manual:              True
 
