@@ -8,7 +8,7 @@
 
 module ShannonSwitchingGame where
 
-import Data.Graph as Graph (Graph, buildG, path)
+import Data.Graph as Graph (buildG, path)
 
 import Data.List (
     find
@@ -19,8 +19,7 @@ import Data.List (
   )
 
 import Data.Map (
-    Map
-  , fromList
+    fromList
   , insert
   , alter
   , empty
@@ -30,7 +29,6 @@ import Data.Map (
   
 import Data.Maybe (
     fromJust
-  , isJust
   , isNothing
   , mapMaybe
   )
@@ -88,7 +86,7 @@ createShannonSwitchingGame n = ShannonSwitchingGame (n, gridEdges n)
 -- ║   │   :
 -- o───o───o
 instance Show ShannonSwitchingGame where
-  show a@(ShannonSwitchingGame (n, l)) = intercalate "\n" ([concat ["o" ++ showH (fromJust $ getPosition a (i+j*n, (i+1)+j*n)) | i <- [0 .. n - 2]]
+  show a@(ShannonSwitchingGame (n, _)) = intercalate "\n" ([concat ["o" ++ showH (fromJust $ getPosition a (i+j*n, (i+1)+j*n)) | i <- [0 .. n - 2]]
     ++ "o\n" ++ concat [showV (fromJust $ getPosition a (i+j*n, i+(j+1)*n)) ++ "   " | i <- [0 .. n - 2]] ++ showV (fromJust $ getPosition a ((n-1)+j*n, (n-1)+(j+1)*n) ) |
     j <- [0 .. n - 2]]
     ++ [concat ["o" ++ showH (fromJust $ getPosition a (i+(n-1)*n, (i+1)+(n-1)*n)) | i <- [0 .. n - 2]] ++ "o"])

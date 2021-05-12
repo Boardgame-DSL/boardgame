@@ -8,8 +8,7 @@ module ConnectFour where
 import Prelude hiding (lookup)
 
 import Data.Map (
-    Map
-  , lookup
+    lookup
   , member
   , adjust
   )
@@ -30,14 +29,12 @@ import Boardgame (
 
 import Boardgame.ColoredGraph (
     ColoredGraph
-  , ColoredGraphTransformer(..)
   , values
   , mapValues
   , mapEdges
   , filterValues
   , rectOctGraph
   , inARow
-  , filterEdges
   )
 
 #ifdef WASM
@@ -55,7 +52,7 @@ import Data.Aeson (
 data ConnectFour = ConnectFour Int (ColoredGraph (Int, Int) Position String)
 
 instance Show ConnectFour where
-  show (ConnectFour k b) = show b
+  show (ConnectFour _ b) = show b
 
 #ifdef WASM
 instance ToJSON ConnectFour where
@@ -66,8 +63,8 @@ instance ToJSON ConnectFour where
 #endif
 
 instance PositionalGame ConnectFour (Int, Int) where
-  positions   (ConnectFour k b)     = values b
-  getPosition (ConnectFour k b) c   = fst <$> lookup c b
+  positions   (ConnectFour _ b)     = values b
+  getPosition (ConnectFour _ b) c   = fst <$> lookup c b
   setPosition (ConnectFour k b) c p = if member c b
     then Just $ ConnectFour k $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing

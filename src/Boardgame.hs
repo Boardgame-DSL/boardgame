@@ -103,14 +103,14 @@ module Boardgame (
   , unless
   , ifNotThen
   , makerBreakerGameOver
+  , avoiderEnforcerGameOver
 ) where
 
 import Data.Functor ((<&>))
-import Data.List (find, intercalate, minimumBy, intersect)
-import Data.Maybe (isJust, fromJust)
+import Data.List (find, minimumBy, intersect)
+import Data.Maybe (fromJust)
 import System.IO (hFlush, stdout)
 import Text.Read (readMaybe)
-import Control.Monad (join, foldM)
 import Control.Applicative ((<|>))
 import Data.Bifunctor (first, Bifunctor (second))
 #ifdef WASM
@@ -206,7 +206,7 @@ class PositionalGame a c | a -> c where
   -- > Just (Just p, cs) -- Player p won
   -- > Just (Nothing, cs)  -- Draw
   --
-  -- We also return `cs`, a list of coordinates to highlight.
+  -- We also return a list of relevant coordinates to highlight.
   gameOver :: a -> Maybe (Outcome, [c])
   -- | Returns a list of all positions. Not in any particular order.
   positions :: a -> [Position]
@@ -347,7 +347,7 @@ instance (PositionalGame a i, PositionalGame b j) => PositionalGame (CombinedPos
 -- | If the predicate holds, a winning state for player 1 is returned. If
 --   not, a "game running" state is returned.
 player1WinsIf :: (a -> Bool) -> a -> Maybe (Outcome, [c])
-player1WinsIf pred x = if pred x
+player1WinsIf predicate x = if predicate x
   then Just (Win Player1, [])
   else Nothing
 
@@ -358,7 +358,7 @@ player2LosesIf = player1WinsIf
 -- | If the predicate holds, a winning state for player 2 is returned. If
 --   not, a "game running" state is returned.
 player2WinsIf :: (a -> Bool) -> a -> Maybe (Outcome, [c])
-player2WinsIf pred x = if pred x
+player2WinsIf predicate x = if predicate x
   then Just (Win Player2, [])
   else Nothing
 
@@ -369,14 +369,14 @@ player1LosesIf = player2WinsIf
 -- | If the predicate holds, a draw state is returned. If not, a "game running"
 --   state is returned.
 drawIf :: (a -> Bool) -> (a -> Maybe (Outcome, [c]))
-drawIf pred x = if pred x
+drawIf predicate x = if predicate x
   then Just (Draw, [])
   else Nothing
 
 -- | If the predicate holds, a winning state for player 1 is returned. If
 --   not, a "game running" state is returned.
 player1WinsWhen :: (a -> Maybe [c]) -> a -> Maybe (Outcome, [c])
-player1WinsWhen pred x = (Win Player1, ) <$> pred x
+player1WinsWhen predicate x = (Win Player1, ) <$> predicate x
 
 -- | A synonym for 'player1WinsIf'. When player 2 loses, player 1 wins.
 player2LosesWhen :: (a -> Maybe [c]) -> a -> Maybe (Outcome, [c])
@@ -385,7 +385,7 @@ player2LosesWhen = player1WinsWhen
 -- | If the predicate holds, a winning state for player 2 is returned. If
 --   not, a "game running" state is returned.
 player2WinsWhen :: (a -> Maybe [c]) -> a -> Maybe (Outcome, [c])
-player2WinsWhen pred x = (Win Player2, ) <$>  pred x
+player2WinsWhen predicate x = (Win Player2, ) <$>  predicate x
 
 -- | A synonym for 'player2WinsIf'. When player 1 loses, player 2 wins.
 player1LosesWhen :: (a -> Maybe [c]) -> a -> Maybe (Outcome, [c])
@@ -394,30 +394,29 @@ player1LosesWhen = player2WinsWhen
 -- | If the predicate holds, a draw state is returned. If not, a "game running"
 --   state is returned.
 drawWhen :: (a -> Maybe [c]) -> (a -> Maybe (Outcome, [c]))
-drawWhen pred x = (Draw, ) <$> pred x
+drawWhen predicate x = (Draw, ) <$> predicate x
 
--- | Combines two criteria into one where if the first criterion does not
---   return a game over state, the result of the second criterion is used.
+-- | Combines two `gameOver` functions into one where if the first function does not
+--   return a game over state, the result of the second function is used.
 ifNotThen :: (a -> Maybe (Outcome, [c]))
     -> (a -> Maybe (Outcome, [c]))
     -> (a -> Maybe (Outcome, [c]))
 ifNotThen crit1 crit2 x = crit1 x <|> crit2 x
 
 infixl 8 `unless`
--- | Combines two criteria into one where the first criterions result is
---   returned, unless the second criterion returns a game over state.
+-- | Combines two `gameOver` functions into one where the first function's result is
+--   returned, unless the second function returns a game over state.
 unless :: (a -> Maybe (Outcome, [c]))
        -> (a -> Maybe (Outcome, [c]))
        -> (a -> Maybe (Outcome, [c]))
 unless = flip ifNotThen
 
--- | Combines several criteria into one. If two or more of the criteria returns
---   different game over states, an error is raised.
+-- | Combines several `gameOver` functions into one. Their results are prioritized by their order in the list.
 criteria :: [a -> Maybe (Outcome, [c])] -> a -> Maybe (Outcome, [c])
 criteria = foldl1 ifNotThen
 
--- | Create a symmetric game from a game defined for only one player.
-symmetric :: (a -> a) -> (a -> Maybe (Outcome, [c])) -> a -> Maybe (Outcome, [c])
+-- | Create a symmetric `gameOver` function from a `gameOver` function defined for only one player.
+symmetric :: (a -> a) -> (a -> Maybe (Outcome, [c])) -> (a -> Maybe (Outcome, [c]))
 symmetric flipState criterion = criterion `ifNotThen` (fmap (first $ mapOutcome nextPlayer) . criterion . flipState)
 
 

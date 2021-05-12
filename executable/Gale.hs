@@ -4,9 +4,8 @@
 
 module Gale where
 
-import Data.Graph as Graph (Graph, buildG, path)
 import Data.List (intercalate)
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (mapMaybe)
 
 import Boardgame (
     Player(..)

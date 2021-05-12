@@ -55,8 +55,8 @@ import Data.Map (Map, mapMaybeWithKey, filterWithKey)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.List ( find, intersect, (\\) )
-import Data.Maybe ( fromJust, isJust, listToMaybe, mapMaybe )
+import Data.List ( find, intersect )
+import Data.Maybe ( fromJust, listToMaybe, mapMaybe )
 import Data.Tree (Tree(..), foldTree)
 import Control.Monad ((<=<))
 import Data.Bifunctor ( bimap, Bifunctor (first, second) )
@@ -108,14 +108,10 @@ octoNeighbors (i, j) = bimap (+ i) (+ j) <$> octoDirections
 
 
 
--- Maps over the individual values of a tuple.
-mapBoth :: (a -> b) -> (a, a) -> (b, b)
-mapBoth f (x, y) = (f x, f y)
 
 -- Combines two tuples using the given function.
 binaryOp :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
 binaryOp op (x, y) (z, w) = (op x z, op y w)
-
 
 hexHexGraphRing :: Int -> [Coordinate]
 hexHexGraphRing base = concat [oneSide k | k <- [0..5]]
@@ -203,11 +199,11 @@ mapMaybeG f g = fmap (second (Map.filterWithKey (\k _ -> Map.member k g'))) g'
 -- | Filters out any vertices whose value, and their outgoing edges with
 --   values, is not accepted by the predicate.
 filterG :: Ord i => ((a, Map i b) -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
-filterG pred = mapMaybeG (\(z, w) -> if pred (z, w) then Just z else Nothing)
+filterG predicate = mapMaybeG (\(z, w) -> if predicate (z, w) then Just z else Nothing)
 
 -- | Filters out any vertices whose value is not accepted by the predicate.
 filterValues :: Ord i => (a -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
-filterValues pred = filterG $ pred . fst
+filterValues predicate = filterG $ predicate . fst
 
 -- | Maps the values of vertices with the given function.
 mapValues :: Ord i => (a -> c) -> ColoredGraph i a b -> ColoredGraph i c b
@@ -220,11 +216,11 @@ mapEdges = fmap . second . fmap
 -- Returns a list of "coordinates" for vertices whose value, and their outgoing
 -- edges with values, are accepted by the predicate.
 nodesPred :: (a -> Map i b -> Bool) -> ColoredGraph i a b -> [i]
-nodesPred pred g = fst <$> filter (uncurry pred . snd) (Map.toList g)
+nodesPred predicate g = fst <$> filter (uncurry predicate . snd) (Map.toList g)
 
 -- | Filters out any edges whose value is not accepted by the predicate.
 filterEdges :: (b -> Bool) -> ColoredGraph i a b -> ColoredGraph i a b
-filterEdges pred = fmap $ second $ Map.filter pred
+filterEdges = fmap . second . Map.filter
 
 -- Returns a path from i to j, including what edge value to take.
 path :: Ord i => ColoredGraph i a b -> i -> i -> Maybe [(b, i)]
@@ -256,7 +252,7 @@ component :: Ord i => ColoredGraph i a b -> i -> [i]
 component  g = fst . component' Set.empty  g
   where
     component' :: Ord i => Set i -> ColoredGraph i a b -> i -> ([i], Set i)
-    component' inputState  g i = (i : xs, newState)
+    component' inputState g i = (i : xs, newState)
       where
         neighbours = Map.assocs $ snd $ g Map.! i
         (xs, newState) = foldl tmp ([], Set.insert i inputState) (fst <$> neighbours)
@@ -283,32 +279,32 @@ inducedSubgraph g nodes = mapMaybeWithKey tmp g
 --   component then return that component. We also try to return only the parts
 --   of the component that are necessary for our predicate to hold.
 anyConnections :: Ord i => (Int -> Bool) -> [[i]] -> ColoredGraph i a b -> Maybe [i]
-anyConnections pred groups = findComponent cond
+anyConnections predicate groups = findComponent cond
   where
-    cond z = pred $ length $ filter (not . Prelude.null . intersect z) groups
+    cond z = predicate $ length $ filter (not . Prelude.null . intersect z) groups
 
 -- | Is there a component along edges with value `dir` that has a length
 --   accepted by `pred`? If there is we return a subset of that component that
 --   matches the predicate
 inARow :: (Ord i, Eq b) => (Int -> Bool) -> b -> ColoredGraph i a b -> Maybe [i]
-inARow pred dir = findComponent (pred . length) . filterEdges (==dir)
+inARow predicate dir = findComponent (predicate . length) . filterEdges (==dir)
 
 -- | Try to find a component of the graph that matches the predicate.
 --   The component that is returned is minimized using a greedy
 --   search while still matching our predicate.
 findComponent :: Ord i => ([i] -> Bool) -> ColoredGraph i a b -> Maybe [i]
-findComponent pred g = minimizeComponent <$> find pred (components g)
+findComponent predicate g = minimizeComponent <$> find predicate (components g)
   where
     -- Remove elements from xs while the condition holds.
     minimizeComponent xs = maybe xs minimizeComponent $ find cond $ oneRemoved xs
       where
         -- The condition we want to hold is our
         -- predicate and that we only have one component.
-        cond z = pred z && 1 == length (components $ inducedSubgraph g z)
+        cond z = predicate z && 1 == length (components $ inducedSubgraph g z)
         -- Lists where we have removed one element from the input.
         oneRemoved :: [i] -> [[i]]
         oneRemoved [] = []
-        oneRemoved [x] = [[]]
+        oneRemoved [_] = [[]]
         oneRemoved (x:xs) = xs : ((x:) <$> oneRemoved xs)
 
 -- | Returns the winning sets representing paths from one set of nodes to

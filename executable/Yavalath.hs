@@ -29,7 +29,6 @@ import Boardgame.ColoredGraph (
   , hexHexGraph
   , inARow
   , mapEdges
-  , winningSetPaths
   , coloredGraphVertexPositions
   , coloredGraphGetVertexPosition
   , coloredGraphSetVertexPosition

@@ -17,7 +17,6 @@ import Boardgame
 import Boardgame.ColoredGraph
   ( ColoredGraph,
     anyConnections,
-    filterG,
     filterValues,
     hexDirections,
     mapValues,
@@ -26,10 +25,7 @@ import Boardgame.ColoredGraph
     values,
   )
 import Data.Map
-  ( Map,
-    adjust,
-    elems,
-    keys,
+  ( adjust,
     lookup,
     member,
   )

@@ -5,13 +5,6 @@
 
 module MNKGame where
 
-import Data.Map (
-    Map
-  , lookup
-  , member
-  , adjust
-  )
-
 import Prelude hiding (lookup)
 
 import Boardgame (
@@ -37,7 +30,6 @@ import Boardgame.ColoredGraph (
   , filterValues
   , rectOctGraph
   , inARow
-  , filterEdges
   , coloredGraphVertexPositions
   , coloredGraphGetVertexPosition
   , coloredGraphSetVertexPosition
@@ -58,7 +50,7 @@ import Data.Aeson (
 data MNKGame = MNKGame Int (ColoredGraph (Int, Int) Position String)
 
 instance Show MNKGame where
-  show (MNKGame k b) = show b
+  show (MNKGame _ b) = show b
 
 #if WASM
 instance ToJSON MNKGame where
@@ -69,7 +61,7 @@ instance ToJSON MNKGame where
 #endif
 
 instance ColoredGraphTransformer (Int, Int) Position String MNKGame where
-  toColoredGraph (MNKGame n b) = b
+  toColoredGraph (MNKGame _ b) = b
   fromColoredGraph (MNKGame n _) = MNKGame n
 
 instance PositionalGame MNKGame (Int, Int) where
