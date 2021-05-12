@@ -4,14 +4,10 @@
 
 module Cross where
 
-import Data.List (intersect)
 import Prelude hiding (lookup)  
 
 import Data.Map (
-    Map
-  , elems
-  , keys
-  , lookup
+    lookup
   , member
   , adjust
   )
@@ -38,7 +34,6 @@ import Boardgame.ColoredGraph (
   , mapValues
   , anyConnections
   , filterValues
-  , filterG
   , hexHexGraph
   , missingDirections
   , hexDirections

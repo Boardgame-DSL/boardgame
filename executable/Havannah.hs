@@ -30,7 +30,6 @@ import Boardgame.ColoredGraph (
   , components
   , hexHexGraph
   , mapEdges
-  , inARow
   , coloredGraphVertexPositions
   , coloredGraphSetVertexPosition
   , coloredGraphGetVertexPosition

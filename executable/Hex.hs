@@ -8,8 +8,7 @@ module Hex where
 import Data.List (intercalate)
 
 import Data.Map (
-    Map
-  , lookup
+    lookup
   , adjust
   , member
   )
@@ -43,7 +42,6 @@ import Boardgame.ColoredGraph (
   , values
   , anyConnections
   , filterValues
-  , filterG
   , winningSetPaths
   , coloredGraphVertexPositions
   , coloredGraphGetVertexPosition
@@ -83,7 +81,7 @@ gridShowLine (Hex n b) y  = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   tileTop = concat $ replicate n " / \\"
 
 instance ColoredGraphTransformer (Int, Int) Position (Int, Int) Hex where
-  toColoredGraph (Hex n b) = b
+  toColoredGraph (Hex _ b) = b
   fromColoredGraph (Hex n _) = Hex n
 
 instance PositionalGame Hex (Int, Int) where
@@ -140,8 +138,8 @@ gridShowLine2 (Hex2 n b) y = [rowOffset ++ tileTop ++ [x | y/=0, x <- " /"]
   tileTop = concat $ replicate n " / \\"
 
 instance PositionalGame Hex2 (Int, Int) where
-  positions   (Hex2 n b)     = values b
-  getPosition (Hex2 n b) c   = fst <$> lookup c b
+  positions   (Hex2 _ b)     = values b
+  getPosition (Hex2 _ b) c   = fst <$> lookup c b
   setPosition (Hex2 n b) c p = if member c b
     then Just $ Hex2 n $ adjust (\(_, xs) -> (p, xs)) c b
     else Nothing
