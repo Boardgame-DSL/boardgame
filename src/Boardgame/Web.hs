@@ -57,8 +57,7 @@ import Asterius.Types (JSVal)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor ((<&>))
 import Boardgame (
-    Player(..)
-  , PositionalGame(..)
+    PositionalGame(..)
   , playerToInt
   , play
   )
